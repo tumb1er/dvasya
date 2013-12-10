@@ -3,7 +3,7 @@
 
 # $Id: $
 import argparse
-from dvasya.server import Superviser
+import os
 
 ARGS = argparse.ArgumentParser(description="Run dvasya http server.")
 ARGS.add_argument(
@@ -19,6 +19,10 @@ ARGS.add_argument(
     '--heartbeat', action="store", dest="heartbeat",
     default=15, type=int, help='Seconds between heartbeat pings'
 )
+ARGS.add_argument(
+    '--settings', action="store", dest="settings",
+    default=None, type=str, help='DVASYA_SETTING_MODULE'
+)
 
 
 def main():
@@ -26,7 +30,10 @@ def main():
     if ':' in args.host:
         args.host, port = args.host.split(':', 1)
         args.port = int(port)
+    if args.settings:
+        os.environ["DVASYA_SETTINGS_MODULE"] = args.settings
 
+    from dvasya.server import Superviser
     superviser = Superviser(args)
     superviser.start()
 

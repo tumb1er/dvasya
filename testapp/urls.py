@@ -2,12 +2,12 @@
 
 # $Id: $
 from dvasya.urls import patterns, url, include
-from testapp.views import default_view, agrs_view
+from testapp.views import default_view, args
 
 
 included = patterns('',
-    url('^test/([\d]+)/', agrs_view),
-    url('^test/(?P<kwarg>[\w]+)/', agrs_view),
+    url('^test/([\d]+)/', args),
+    url('^test/(?P<kwarg>[\w]+)/', args),
 )
 
 urlpatterns = patterns('',

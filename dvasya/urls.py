@@ -3,7 +3,7 @@
 # $Id: $
 import asyncio
 import re
-from dvasya import settings
+from dvasya.conf import settings
 
 
 def patterns(prefix, *pattern_list):

@@ -4,7 +4,7 @@ import shutil
 
 if not os.path.exists('scripts'):
     os.makedirs('scripts')
-shutil.copyfile('dvasya/manage.py', 'scripts/dvasrv')
+shutil.copyfile('scripts/manage.py', 'scripts/dvasya-manage')
 
 setup(
     name='dvasya',

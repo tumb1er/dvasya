@@ -11,8 +11,6 @@ import time
 import aiohttp.server
 from aiohttp import websocket
 import asyncio
-
-from .response import HttpResponse
 from .urls import UrlResolver
 
 
@@ -31,10 +29,12 @@ class HttpServer(aiohttp.server.ServerHttpProtocol):
         response = yield from self.resolver.dispatch(request, self.transport)
         response.attach_transport(self.transport, request)
         if response.content:
-            response.write(response.content)
+            # FIXME: other encodings?
+            response.write(bytearray(response.content, "utf-8"))
         response.write_eof()
         # FIXME: need this?
         # response.force_close()
+
 
 
 class ChildProcess:
@@ -210,7 +210,6 @@ class Superviser:
         sock.bind((self.args.host, self.args.port))
         sock.listen(1024)
         sock.setblocking(False)
-
         self.prefork()
 
         # start processes

@@ -40,6 +40,7 @@ class HttpResponse(HttpMessage):
             self.add_header('Content-Encoding', 'gzip')
             self.add_compression_filter('gzip')
         self.add_chunking_filter(1025)
+        self.add_header("Content-Type", self.content_type)
         self.send_headers()
 
     @property
