@@ -2,6 +2,7 @@
 
 # $Id: $
 from dvasya.response import HttpResponse
+from dvasya.views import View
 
 
 def default_view(request):
@@ -17,3 +18,9 @@ def default_view(request):
 def args(request, *args, **kwargs):
     body = u"<h2>A: {}</h2><h2>KW: {}</h2>".format(args, kwargs)
     return HttpResponse(body, 200)
+
+
+class TestView(View):
+    def get(self, request, *args, **kwargs):
+        agent = request.headers.get('user-agent', '')
+        return HttpResponse("<H2>Agent: {}</H2>".format(agent))

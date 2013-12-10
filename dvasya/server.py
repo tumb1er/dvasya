@@ -1,7 +1,6 @@
 # coding: utf-8
 
 # $Id: $
-import logging
 import os
 import signal
 import socket
@@ -11,11 +10,20 @@ import time
 import aiohttp.server
 from aiohttp import websocket
 import asyncio
-from .urls import UrlResolver
+from dvasya.response import HttpResponseNotFound
+from dvasya.urls import UrlResolver, NoMatch
 
 
 class HttpServer(aiohttp.server.ServerHttpProtocol):
     resolver = UrlResolver.autodiscover()
+
+    @asyncio.coroutine
+    def get_response(self, request):
+        try:
+            result = yield from self.resolver.dispatch(request, self.transport)
+            return result
+        except NoMatch as e:
+            return HttpResponseNotFound(e)
 
     @asyncio.coroutine
     def handle_request(self, message, payload):
@@ -26,7 +34,7 @@ class HttpServer(aiohttp.server.ServerHttpProtocol):
             headers.add_header(hdr, val)
         request.headers = headers
 
-        response = yield from self.resolver.dispatch(request, self.transport)
+        response = yield from self.get_response(request)
         response.attach_transport(self.transport, request)
         if response.content:
             # FIXME: other encodings?

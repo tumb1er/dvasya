@@ -2,7 +2,7 @@
 
 # $Id: $
 from dvasya.urls import patterns, url, include
-from testapp.views import default_view, args
+from testapp.views import default_view, args, TestView
 
 
 included = patterns('',
@@ -12,5 +12,6 @@ included = patterns('',
 
 urlpatterns = patterns('',
     url('^include/', include('testapp.urls.included')),
+    url('^class/', TestView.as_view()),
     url('^$', default_view),
 )

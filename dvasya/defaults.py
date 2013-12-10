@@ -4,3 +4,4 @@
 
 
 ROOT_URLCONF = 'urls'
+DEBUG = True
