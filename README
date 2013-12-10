@@ -1,0 +1,10 @@
+=== dvasya ===
+
+== Django Views for AsyncIO API ==
+
+Framework for creating asynchronous REST APIs in Django Class-based views style.
+
+Django ORM is not applicable because async connection pool is missing,
+but it is possible to use eventloop.run_in_executor() to run SQL querries in
+separate threadpool.
+
