@@ -2,6 +2,7 @@
 
 # $Id: $
 from functools import update_wrapper
+import asyncio
 from dvasya.response import HttpResponseNotAllowed, HttpResponse
 
 
@@ -10,6 +11,7 @@ class View(object):
     Intentionally simple parent class for all views. Only implements
     dispatch-by-method and simple sanity checking.
     """
+    __inited__ = False
 
     http_method_names = ['get', 'post', 'put', 'delete', 'head', 'options', 'trace']
 
@@ -22,6 +24,11 @@ class View(object):
         # instance, or raise an error.
         for key, value in kwargs.items():
             setattr(self, key, value)
+
+    @classmethod
+    @asyncio.coroutine
+    def init_class_async(cls):
+        pass
 
     @classmethod
     def as_view(cls, **initkwargs):
@@ -56,6 +63,7 @@ class View(object):
         update_wrapper(view, cls.dispatch, assigned=())
         return view
 
+    @asyncio.coroutine
     def dispatch(self, request, *args, **kwargs):
         # Try to dispatch to the right method; if a method doesn't exist,
         # defer to the error handler. Also defer to the error handler if the
@@ -65,7 +73,11 @@ class View(object):
                               self.http_method_not_allowed)
         else:
             handler = self.http_method_not_allowed
-        return handler(request, *args, **kwargs)
+        if not self.__class__.__inited__:
+            self.__class__.__inited__ = True
+            yield from self.init_class_async()
+        result = yield from handler(request, *args, **kwargs)
+        return result
 
     def http_method_not_allowed(self, request, *args, **kwargs):
         return HttpResponseNotAllowed(self._allowed_methods())
