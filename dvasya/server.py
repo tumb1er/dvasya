@@ -11,6 +11,8 @@ import aiohttp.server
 from aiohttp import websocket
 import asyncio
 from urllib import parse
+import sys
+import atexit
 from dvasya.response import HttpResponseNotFound
 from dvasya.urls import UrlResolver, NoMatch
 
@@ -234,6 +236,7 @@ class Superviser:
         self.loop = asyncio.get_event_loop()
         self.args = args
         self.workers = []
+        self.pidfile = os.path.join(os.getcwd(), self.args.pidfile)
 
     def start(self):
         # bind socket
@@ -252,6 +255,59 @@ class Superviser:
         self.loop.run_forever()
 
     def prefork(self):
-        # FIXME: демонизация тута
-        pass
+        if not self.args.no_daemon:
+            self.daemonize()
+
+    def daemonize(self):
+        """
+        Deamonize, do double-fork magic.
+        """
+        try:
+            pid = os.fork()
+            if pid > 0:
+                # Exit first parent.
+                sys.exit(0)
+        except OSError as e:
+            message = "Fork #1 failed: {}\n".format(e)
+            sys.stderr.write(message)
+            sys.exit(1)
+
+        # Decouple from parent environment.
+        os.chdir("/")
+        os.setsid()
+        os.umask(0)
+
+        # Do second fork.
+        try:
+            pid = os.fork()
+            if pid > 0:
+                # Exit from second parent.
+                sys.exit(0)
+        except OSError as e:
+            message = "Fork #2 failed: {}\n".format(e)
+            sys.stderr.write(message)
+            sys.exit(1)
+
+        # Redirect standard file descriptors.
+        sys.stdout.flush()
+        sys.stderr.flush()
+
+        # FIXME: what if normal stdout redirect is needed?
+        si = open('/dev/null', 'r')
+        so = open('/dev/null', 'a+')
+        se = open('/dev/null', 'a+')
+        os.dup2(si.fileno(), sys.stdin.fileno())
+        os.dup2(so.fileno(), sys.stdout.fileno())
+        os.dup2(se.fileno(), sys.stderr.fileno())
+
+        # Write pidfile.
+        pid = str(os.getpid())
+        open(self.pidfile,'w+').write("{}\n".format(pid))
+
+        # Register a function to clean up.
+        atexit.register(self.delpid)
+
+    def delpid(self):
+        os.remove(self.pidfile)
+
 

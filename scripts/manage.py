@@ -23,6 +23,14 @@ ARGS.add_argument(
     '--settings', action="store", dest="settings",
     default=None, type=str, help='DVASYA_SETTING_MODULE'
 )
+ARGS.add_argument(
+    '--no-daemon', action="store_true", dest="no_daemon",
+    default=False, help="don't daemonize http server"
+)
+ARGS.add_argument(
+    '--pid-file', action="store", dest="pidfile",
+    default="dvasya.pid", type=str, help="path to pidfile"
+)
 
 
 def main():
