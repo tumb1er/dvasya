@@ -10,6 +10,7 @@ import time
 import aiohttp.server
 from aiohttp import websocket
 import asyncio
+from urllib import parse
 from dvasya.response import HttpResponseNotFound
 from dvasya.urls import UrlResolver, NoMatch
 
@@ -33,16 +34,39 @@ class HttpServer(aiohttp.server.ServerHttpProtocol):
         for hdr, val in message.headers:
             headers.add_header(hdr, val)
         request.headers = headers
+        request.META = self.get_meta(request, self.transport)
+        request.GET = self.get_get_params(request)
 
         response = yield from self.get_response(request)
+        response.force_close()
         response.attach_transport(self.transport, request)
         if response.content:
             # FIXME: other encodings?
             response.write(bytearray(response.content, "utf-8"))
         response.write_eof()
-        # FIXME: need this?
-        # response.force_close()
 
+    def get_meta(self, request, transport):
+        meta = dict()
+        for key, value in request.headers.items():
+            meta_key = key.upper().replace('-', '_')
+            meta[meta_key] = value
+        meta['REMOTE_ADDR'] = transport._extra['peername'][0]
+        return meta
+
+    def get_get_params(self, request):
+        get = dict()
+        path, qs = parse.splitquery(request.path)
+        query = parse.parse_qsl(qs)
+        for key, value in query:
+            if key in get:
+                prev_value = get[key]
+                if type(prev_value) is not list:
+                    get[key] = [prev_value]
+                get[key].append(value)
+            else:
+                get[key] = value
+
+        return get
 
 
 class ChildProcess:

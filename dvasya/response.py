@@ -11,8 +11,8 @@ class HttpResponse(HttpMessage):
     status_code = 200
 
     HOP_HEADERS = {
-        'CONNECTION',
-        'KEEP-ALIVE',
+        'Connection',
+        'Keep-Alive',
         'PROXY-AUTHENTICATE',
         'PROXY-AUTHORIZATION',
         'TE',
@@ -34,7 +34,7 @@ class HttpResponse(HttpMessage):
         self.transport = transport
 
         self.add_header('Transfer-Encoding', 'chunked')
-        accept_encoding = request.headers.get('accept-encoging', '').lower()
+        accept_encoding = request.headers.get('log_view-encoging', '').lower()
         if 'deflate' in accept_encoding:
             self.add_header('Content-Encoding', 'deflate')
             self.add_compression_filter('deflate')
