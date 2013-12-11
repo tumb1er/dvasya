@@ -252,7 +252,10 @@ class Superviser:
             self.workers.append(Worker(self.loop, self.args, sock))
 
         self.loop.add_signal_handler(signal.SIGINT, lambda: self.loop.stop())
+        self.loop.add_signal_handler(signal.SIGTERM, lambda: self.loop.stop())
         self.loop.run_forever()
+        if not self.args.no_daemon:
+            self.delpid()
 
     def prefork(self):
         if not self.args.no_daemon:
@@ -302,12 +305,17 @@ class Superviser:
 
         # Write pidfile.
         pid = str(os.getpid())
-        open(self.pidfile,'w+').write("{}\n".format(pid))
+        pidfile = open(self.pidfile, 'w+')
+        pidfile.write("{}\n".format(pid))
+        pidfile.close()
 
         # Register a function to clean up.
         atexit.register(self.delpid)
 
     def delpid(self):
+        f = open('/tmp/atexit.txt', 'w')
+        f.write(self.pidfile)
+        f.close()
         os.remove(self.pidfile)
 
 
