@@ -13,12 +13,14 @@ import asyncio
 from urllib import parse
 import sys
 import atexit
+from dvasya.logging import getLogger
 from dvasya.response import HttpResponseNotFound
 from dvasya.urls import UrlResolver, NoMatch
 
 
 class HttpServer(aiohttp.server.ServerHttpProtocol):
     resolver = UrlResolver.autodiscover()
+    logger = getLogger('dvasya.request')
 
     @asyncio.coroutine
     def get_response(self, request):
