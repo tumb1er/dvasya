@@ -1,6 +1,15 @@
 # coding: utf-8
 
 # $Id: $
+
+# HttpResponse class.
+#
+# Combines aiohttp.protocol.HttpResponse interface
+# with a small part of Django HttpResponse interface
+#
+# @see https://docs.djangoproject.com/en/dev/ref/request-response/
+
+
 from wsgiref.handlers import format_date_time
 from aiohttp.protocol import HttpMessage
 from aiohttp.server import RESPONSES
@@ -13,14 +22,14 @@ class HttpResponse(HttpMessage):
     HOP_HEADERS = {
         'Connection',
         'Keep-Alive',
-        'PROXY-AUTHENTICATE',
-        'PROXY-AUTHORIZATION',
-        'TE',
-        'TRAILERS',
-        'TRANSFER-ENCODING',
-        'UPGRADE',
-        'SERVER',
-        'DATE',
+        'Proxy-Authenticate',
+        'Proxy-authorization',
+        'Te',
+        'Trailers',
+        'Transfer-Encoding',
+        'Upgrade',
+        'Server',
+        'Date',
     }
 
     def __init__(self, content='', status=None, content_type="text/html",
@@ -31,6 +40,18 @@ class HttpResponse(HttpMessage):
         self.content_type = content_type
 
     def attach_transport(self, transport, request):
+        """ Attaches transport to response.
+
+        Detects request transfer capabilities and adds corresponding
+        stream filters.
+
+        At last, writes http headers to the attached transport.
+
+        @param transport: transport for current request
+        @type transport: asyncio.transports.Transport
+        @param request: current http request object
+        @type request: aiohttp.Request
+        """
         self.transport = transport
 
         self.add_header('Transfer-Encoding', 'chunked')
@@ -51,6 +72,10 @@ class HttpResponse(HttpMessage):
 
     @status.setter
     def status(self, value):
+        """ Sets http status and changes status line.
+        @param value: http status code
+        @type value: int
+        """
         self.__status = value
         self.status_line = 'HTTP/{}.{} {} {}\r\n'.format(
             self.version[0], self.version[1], self.__status,
@@ -58,11 +83,12 @@ class HttpResponse(HttpMessage):
 
     def _add_default_headers(self):
         super()._add_default_headers()
-        self.headers.extend((('DATE', format_date_time(None)),
-                             ('SERVER', self.SERVER_SOFTWARE),))
+        self.headers.extend((('Date', format_date_time(None)),
+                             ('Server', self.SERVER_SOFTWARE),))
 
 
 class HttpResponseNotAllowed(HttpResponse):
+    """ Method Not Allowed response class."""
     status_code = 405
 
     def __init__(self, permitted_methods):
@@ -71,6 +97,11 @@ class HttpResponseNotAllowed(HttpResponse):
 
 
 class HttpResponseNotFound(HttpResponse):
+    """ Not Found response class.
+
+    If DEBUG, and url resolver was not able to find resource,
+    writes last visited urlconf dump.
+    """
     status_code = 404
 
     def __init__(self, no_match_error=None):

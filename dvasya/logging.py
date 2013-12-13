@@ -1,13 +1,29 @@
 # coding: utf-8
 
 # $Id: $
+
+# dvasya logging configurator module
+#
+# when imported, configures python logging with config defined in
+# dvasya.conf.settings.LOGGING variable
+#
+# All configuration code is ported from Django
+# http://djangoproject.com
+#
+# P.S. filters for loggers and handlers are not supported.
+
 import logging
 import sys
 from dvasya.conf import settings
+from dvasya.utils import import_object
+
+__all__ = ['getLogger']
+
 
 getLogger = logging.getLogger
 
 config = settings.LOGGING
+
 
 def common_logger_config(logger_config, logger, incremental=False):
     """
@@ -23,10 +39,6 @@ def common_logger_config(logger_config, logger, incremental=False):
         handlers = logger_config.get('handlers', None)
         if handlers:
             add_handlers(logger, handlers)
-            # FIXME: need filters?
-            # filters = config.get('filters', None)
-            # if filters:
-            #     self.add_filters(logger, filters)
 
 
 def configure_logger(name, logger_config, incremental=False):
@@ -47,12 +59,6 @@ def add_handlers(logger, handlers):
             raise ValueError('Unable to add handler %r: %s' % (h, e))
 
 
-def import_handler(class_path):
-    module_name, attr_name = class_path.rsplit('.', 1)
-    module = __import__(module_name, fromlist=attr_name)
-    return getattr(module, attr_name)
-
-
 def configure_handler(handler_config):
     """Configure a handler from a dictionary."""
     formatter = handler_config.pop('formatter', None)
@@ -63,7 +69,7 @@ def configure_handler(handler_config):
             raise ValueError('Unable to set formatter '
                              '%r: %s' % (formatter, e))
     level = handler_config.pop('level', None)
-    klass = import_handler(handler_config.pop('class'))
+    klass = import_object(handler_config.pop('class'))
     factory = klass
     kwargs = dict([(k, handler_config[k]) for k in handler_config])
     result = factory(**kwargs)
@@ -90,7 +96,6 @@ def configure_formatter(formatter_config):
 
 def configure():
     """Do the configuration."""
-
     config = settings.LOGGING
     incremental = config.pop('incremental', False)
     EMPTY_DICT = {}

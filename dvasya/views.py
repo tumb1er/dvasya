@@ -1,6 +1,14 @@
 # coding: utf-8
 
 # $Id: $
+
+# Django-style class-based views
+#
+# partially ported from django
+#
+# @see https://docs.djangoproject.com/en/dev/topics/class-based-views/
+
+
 from functools import update_wrapper
 import asyncio
 from dvasya.response import HttpResponseNotAllowed, HttpResponse
@@ -28,15 +36,16 @@ class View(object):
     @classmethod
     @asyncio.coroutine
     def init_class_async(cls):
+        """ Asynchronous class initializer."""
         pass
 
     @classmethod
-    def as_view(cls, **initkwargs):
+    def as_view(cls, **init_kwargs):
         """
         Main entry point for a request-response process.
         """
         # sanitize keyword arguments
-        for key in initkwargs:
+        for key in init_kwargs:
             if key in cls.http_method_names:
                 raise TypeError("You tried to pass in the %s method name as a "
                                 "keyword argument to %s(). Don't do that."
@@ -47,7 +56,7 @@ class View(object):
                                 "attributes of the class." % (cls.__name__, key))
 
         def view(request, *args, **kwargs):
-            self = cls(**initkwargs)
+            self = cls(**init_kwargs)
             if hasattr(self, 'get') and not hasattr(self, 'head'):
                 self.head = self.get
             self.request = request
@@ -65,6 +74,11 @@ class View(object):
 
     @asyncio.coroutine
     def dispatch(self, request, *args, **kwargs):
+        """ Asynchronous request dispatcher.
+
+        Calls class initializer if necessary and dispatches request
+        to a corresponding handler by HTTP method name.
+        """
         # Try to dispatch to the right method; if a method doesn't exist,
         # defer to the error handler. Also defer to the error handler if the
         # request method isn't on the approved list.

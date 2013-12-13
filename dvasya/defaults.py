@@ -2,10 +2,13 @@
 
 # $Id: $
 
-
+# root url configuration module name
 ROOT_URLCONF = 'urls'
+
+# debug flag
 DEBUG = True
 
+# internal logging setup
 LOGGING = {
     'disable_existing_loggers': False,
     'formatters': {

@@ -1,55 +1,118 @@
 # coding: utf-8
 
 # $Id: $
+
+# Production-ready http server.
+#
+# Dvasya http server has following capabilities:
+# * daemonize
+# * master-worker multiprocess configuration
+# * pidfile, host and port options
+# * worker shutdown on SIGINT, SIGTERM or master death.
+#
+# inspired by aiohttp.examples.mpsrv.HttpServer
+# @see https://github.com/fafhrd91/aiohttp
+
+
 import os
 import signal
 import socket
 import email.message
+from urllib import parse
 import time
+import sys
+import atexit
+import asyncio
 
 import aiohttp.server
 from aiohttp import websocket
-import asyncio
-from urllib import parse
-import sys
-import atexit
+
 from dvasya.logging import getLogger
 from dvasya.response import HttpResponseNotFound
 from dvasya.urls import UrlResolver, NoMatch
 
 
 class HttpServer(aiohttp.server.ServerHttpProtocol):
+    """ Asynchronous HTTP Server."""
+
     resolver = UrlResolver.autodiscover()
     logger = getLogger('dvasya.request')
 
     @asyncio.coroutine
     def get_response(self, request):
+        """ Resolves view class by request path and calls request handler.
+
+        If no handler is found by resolver, returns 404 page.
+        """
         try:
             result = yield from self.resolver.dispatch(request, self.transport)
             return result
         except NoMatch as e:
             return HttpResponseNotFound(e)
 
-    @asyncio.coroutine
-    def handle_request(self, message, payload):
-        request = aiohttp.Request(self.transport, message.method,
-                                  message.path, message.version)
+    def get_http_headers(self, message):
+        """ Transforms headers from aiohttp.message to more usable form.
+
+        @param message: http request object
+        @type message: aiohttp.RawRequestMessage
+
+        @return: http readers container
+        @rtype: email.message.Message
+        """
         headers = email.message.Message()
         for hdr, val in message.headers:
             headers.add_header(hdr, val)
+        return headers
+
+    @asyncio.coroutine
+    def handle_request(self, message, payload):
+        """ Handles HTTP request.
+
+        Constructs request from http message,
+        computes response and writes content of HttpResponse to client.
+
+        @param message: http request object
+        @type message: aiohttp.RawRequestMessage
+
+        @param payload: http request stream handler
+        @type payload: aiohttp.parsers.DataQueue
+
+        @rtype : None
+        """
+        request = aiohttp.Request(self.transport, message.method,
+                                  message.path, message.version)
+        headers = self.get_http_headers(message)
         request.headers = headers
+
         request.META = self.get_meta(request, self.transport)
         request.GET = self.get_get_params(request)
-
+        # dispatching and computing response
         response = yield from self.get_response(request)
+        # force response not to keep-alive connection (for ab test, mostly)
         response.force_close()
+        # attaches transport for aiohttp.HttpMessage and sends headers
         response.attach_transport(self.transport, request)
+        # if response has content, sends it to client
         if response.content:
             # FIXME: other encodings?
             response.write(bytearray(response.content, "utf-8"))
+        # finishes response
         response.write_eof()
 
-    def get_meta(self, request, transport):
+    @staticmethod
+    def get_meta(request, transport):
+        """ Constructs META dict for request.
+
+        @see https://docs.djangoproject.com/en/dev/ref/request-response/#django.http.HttpRequest.META
+
+        @param request: http request object
+        @type request: aiohttp.Request
+        @param transport: transport object
+        @type transport: asyncio.transports.Transport
+
+        @rtype: dict
+        @return request metadata dictionary
+        """
         meta = dict()
         for key, value in request.headers.items():
             meta_key = key.upper().replace('-', '_')
@@ -57,7 +120,18 @@ class HttpServer(aiohttp.server.ServerHttpProtocol):
         meta['REMOTE_ADDR'] = transport._extra['peername'][0]
         return meta
 
-    def get_get_params(self, request):
+    @staticmethod
+    def get_get_params(request):
+        """ Constructs GET dict for request.
+
+        @see https://docs.djangoproject.com/en/dev/ref/request-response/#django.http.HttpRequest.GET
+
+        @param request: http request object
+        @type request: aiohttp.Request
+
+        @rtype: dict
+        @return request metadata dictionary
+        """
         get = dict()
         path, qs = parse.splitquery(request.path)
         query = parse.parse_qsl(qs)
@@ -69,11 +143,11 @@ class HttpServer(aiohttp.server.ServerHttpProtocol):
                 get[key].append(value)
             else:
                 get[key] = value
-
         return get
 
 
 class ChildProcess:
+    """ Worker process for http server."""
 
     def __init__(self, up_read, down_write, args, sock):
         self.up_read = up_read
@@ -135,6 +209,10 @@ class ChildProcess:
 
 
 class Worker:
+    """ Worker controller for superviser.
+
+    Starts child process and establishes communication with it.
+    """
 
     _started = False
 
@@ -233,6 +311,7 @@ class Worker:
 
 
 class Superviser:
+    """ Master process for http server."""
 
     def __init__(self, args):
         self.loop = asyncio.get_event_loop()
