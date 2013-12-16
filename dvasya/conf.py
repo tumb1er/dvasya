@@ -6,6 +6,7 @@ from dvasya import defaults
 
 __all__ = ['settings']
 import os
+import sys
 
 
 def _load_settings():
@@ -16,7 +17,11 @@ def _load_settings():
     DVASYA_SETTINGS_MODULE (by default, it is 'settings')
     """
     module_name = os.environ.get("DVASYA_SETTINGS_MODULE", 'settings')
-    print("settings loaded from module %s" % module_name)
+    cwd = os.getcwd()
+    if cwd not in sys.path:
+        sys.path.append(cwd)
+    print("current working directory: %s" % cwd)
+    print("settings loaded from module: %s" % module_name)
     module = __import__(module_name, fromlist='*')
     for attr in dir(defaults):
         if not hasattr(module, attr):
