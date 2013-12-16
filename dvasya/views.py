@@ -34,12 +34,6 @@ class View(object):
             setattr(self, key, value)
 
     @classmethod
-    @asyncio.coroutine
-    def init_class_async(cls):
-        """ Asynchronous class initializer."""
-        pass
-
-    @classmethod
     def as_view(cls, **init_kwargs):
         """
         Main entry point for a request-response process.
@@ -90,9 +84,6 @@ class View(object):
                               self.http_method_not_allowed)
         else:
             handler = self.http_method_not_allowed
-        if not self.__class__.__inited__:
-            self.__class__.__inited__ = True
-            yield from self.init_class_async()
         result = yield from handler(request, *args, **kwargs)
         return result
 
