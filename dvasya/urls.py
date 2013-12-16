@@ -93,7 +93,7 @@ def url(rx, view_or_patterns, name=None):
     @type rx: str
 
     @param view_or_patterns: view function or include(...) result
-    @type view_or_patterns: (function, tuple, list)
+    @type view_or_patterns: (function|tuple|list)
 
     @return pattern matcher
     @rtype UrlPattern

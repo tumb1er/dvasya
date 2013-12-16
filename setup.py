@@ -10,7 +10,7 @@ setup(
     name='dvasya',
     version='0.0.1',
     packages=['dvasya'],
-    scripts=['scripts/dvasrv'],
+    scripts=['scripts/dvasya-manage'],
     url='',
     license='Beer Licence',
     author='tumbler',

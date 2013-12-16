@@ -40,7 +40,6 @@ def main():
         args.port = int(port)
     if args.settings:
         os.environ["DVASYA_SETTINGS_MODULE"] = args.settings
-
     from dvasya.server import Superviser
     superviser = Superviser(args)
     superviser.start()

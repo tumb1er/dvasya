@@ -84,7 +84,9 @@ class View(object):
                               self.http_method_not_allowed)
         else:
             handler = self.http_method_not_allowed
-        result = yield from handler(request, *args, **kwargs)
+        result = handler(request, *args, **kwargs)
+        if asyncio.tasks.iscoroutine(result):
+            result = yield from result
         return result
 
     def http_method_not_allowed(self, request, *args, **kwargs):
