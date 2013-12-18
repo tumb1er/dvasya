@@ -3,5 +3,7 @@
 # $Id: $
 
 
-# Views from Django for asyncio-http
+# Django Views for Async APIs
 
+
+VERSION = '0.1.0'

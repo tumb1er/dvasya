@@ -5,10 +5,11 @@ import shutil
 if not os.path.exists('scripts'):
     os.makedirs('scripts')
 shutil.copyfile('scripts/manage.py', 'scripts/dvasya-manage')
+from dvasya import VERSION
 
 setup(
     name='dvasya',
-    version='0.0.1',
+    version=VERSION,
     packages=['dvasya'],
     scripts=['scripts/dvasya-manage'],
     url='',
