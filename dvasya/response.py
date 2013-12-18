@@ -8,7 +8,7 @@
 # with a small part of Django HttpResponse interface
 #
 # @see https://docs.djangoproject.com/en/dev/ref/request-response/
-
+import json
 
 from wsgiref.handlers import format_date_time
 from aiohttp.protocol import HttpMessage
@@ -85,6 +85,17 @@ class HttpResponse(HttpMessage):
         super()._add_default_headers()
         self.headers.extend((('Date', format_date_time(None)),
                              ('Server', self.SERVER_SOFTWARE),))
+
+
+class JSONResponse(HttpResponse):
+    """ Special HTTPResponse class that dumps data to json format."""
+
+    def __init__(self, content='', status=None, content_type="text/html",
+                 transport=None, http_version=(1, 1), close=False):
+        if not isinstance(content, str):
+            content = json.dumps(content)
+        super().__init__(content, status, content_type, transport, http_version,
+                         close)
 
 
 class HttpResponseNotAllowed(HttpResponse):
