@@ -12,7 +12,7 @@ separate thread pool.
 
 ## Quick start
 
-An example project could be found in testapp module.
+An example project could be found in `testapp` module.
 
 ### Project settings
 
