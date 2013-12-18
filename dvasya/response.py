@@ -90,7 +90,7 @@ class HttpResponse(HttpMessage):
 class JSONResponse(HttpResponse):
     """ Special HTTPResponse class that dumps data to json format."""
 
-    def __init__(self, content='', status=None, content_type="text/html",
+    def __init__(self, content='', status=None, content_type="application/json",
                  transport=None, http_version=(1, 1), close=False):
         if not isinstance(content, str):
             content = json.dumps(content)
