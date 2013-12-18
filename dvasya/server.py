@@ -117,7 +117,8 @@ class HttpServer(aiohttp.server.ServerHttpProtocol):
         for key, value in request.headers.items():
             meta_key = key.upper().replace('-', '_')
             meta[meta_key] = value
-        meta['REMOTE_ADDR'] = transport._extra['peername'][0]
+        meta['REMOTE_ADDR'] = transport.get_extra_info(
+            "peername", (None, None))[0]
         return meta
 
     @staticmethod
