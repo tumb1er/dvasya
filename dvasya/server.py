@@ -373,6 +373,10 @@ class Superviser:
             sys.stderr.write(message)
             sys.exit(1)
 
+        # Open pidfile.
+        pid = str(os.getpid())
+        pidfile = open(self.pidfile, 'w+')
+        
         # Redirect standard file descriptors.
         sys.stdout.flush()
         sys.stderr.flush()
@@ -385,9 +389,6 @@ class Superviser:
         os.dup2(so.fileno(), sys.stdout.fileno())
         os.dup2(se.fileno(), sys.stderr.fileno())
 
-        # Write pidfile.
-        pid = str(os.getpid())
-        pidfile = open(self.pidfile, 'w+')
         pidfile.write("{}\n".format(pid))
         pidfile.close()
 
