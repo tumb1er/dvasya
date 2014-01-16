@@ -72,8 +72,9 @@ class DvasyaHttpClient:
         self._path = path
         self._headers = headers or {}
         self._transport = mock.Mock()
-        self._transport._extra = self._get_transport_extra()
         self._transport.write = mock.Mock(side_effect=self._capture_response)
+        self._transport.get_extra_info = mock.Mock(
+            side_effect=self._get_extra_info)
         self._create_response()
         self._server = HttpServer(loop=self._loop)
         self._server.connection_made(self._transport)
@@ -138,6 +139,9 @@ class DvasyaHttpClient:
         return {
             'peername': self.peername
         }
+
+    def _get_extra_info(self, key, default=None):
+        return self._get_transport_extra().get(key, default)
 
     def _create_response(self):
         """ Prepares response parser buffer."""

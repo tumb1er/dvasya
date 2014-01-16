@@ -80,6 +80,7 @@ class HttpResponse(HttpMessage):
         self.status_line = 'HTTP/{}.{} {} {}\r\n'.format(
             self.version[0], self.version[1], self.__status,
             RESPONSES.get(self.__status, (self.__status,))[0])
+        self.status_code = value
 
     def _add_default_headers(self):
         super()._add_default_headers()
