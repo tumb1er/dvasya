@@ -95,7 +95,10 @@ class HttpServer(aiohttp.server.ServerHttpProtocol):
         # if response has content, sends it to client
         if response.content:
             # FIXME: other encodings?
-            response.write(bytearray(response.content, "utf-8"))
+            if isinstance(response.content, str):
+                response.write(bytearray(response.content, "utf-8"))
+            else:
+                response.write(response.content)
         # finishes response
         response.write_eof()
 
