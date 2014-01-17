@@ -81,8 +81,7 @@ class HttpServer(aiohttp.server.ServerHttpProtocol):
         """
         request = aiohttp.Request(self.transport, message.method,
                                   message.path, message.version)
-        headers = self.get_http_headers(message)
-        request.headers = headers
+        request.headers = self.get_http_headers(message)
 
         request.META = self.get_meta(request, self.transport)
         request.GET = self.get_get_params(request)
