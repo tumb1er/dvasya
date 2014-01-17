@@ -5,12 +5,13 @@
 # dvasya logging configurator module
 #
 # when imported, configures python logging with config defined in
-# dvasya.conf.settings.LOGGING variable
+# dvasya.conf.LOGGING variable
 #
 # All configuration code is ported from Django
 # http://djangoproject.com
 #
 # P.S. filters for loggers and handlers are not supported.
+from copy import deepcopy
 
 import logging
 import sys
@@ -22,7 +23,7 @@ __all__ = ['getLogger']
 
 getLogger = logging.getLogger
 
-config = settings.LOGGING
+LOGGING = deepcopy(settings.LOGGING)
 
 
 def common_logger_config(logger_config, logger, incremental=False):
@@ -45,7 +46,7 @@ def configure_logger(name, logger_config, incremental=False):
     """Configure a non-root logger from a dictionary."""
     logger = logging.getLogger(name)
     common_logger_config(logger_config, logger, incremental)
-    propagate = settings.LOGGING.get('propagate', None)
+    propagate = LOGGING.get('propagate', None)
     if propagate is not None:
         logger.propagate = propagate
 
@@ -54,7 +55,7 @@ def add_handlers(logger, handlers):
     """Add handlers to a logger from a list of names."""
     for h in handlers:
         try:
-            logger.addHandler(settings.LOGGING['handlers'][h])
+            logger.addHandler(LOGGING['handlers'][h])
         except Exception as e:
             raise ValueError('Unable to add handler %r: %s' % (h, e))
 
@@ -64,7 +65,7 @@ def configure_handler(handler_config):
     formatter = handler_config.pop('formatter', None)
     if formatter:
         try:
-            formatter = settings.LOGGING['formatters'][formatter]
+            formatter = LOGGING['formatters'][formatter]
         except Exception as e:
             raise ValueError('Unable to set formatter '
                              '%r: %s' % (formatter, e))
@@ -96,7 +97,7 @@ def configure_formatter(formatter_config):
 
 def configure():
     """Do the configuration."""
-    config = settings.LOGGING
+    config = LOGGING
     incremental = config.pop('incremental', False)
     EMPTY_DICT = {}
     logging._acquireLock()

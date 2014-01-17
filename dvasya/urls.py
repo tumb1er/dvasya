@@ -34,13 +34,13 @@ def include(patterns_or_path):
 class UrlPattern:
     """ URL pattern matcher."""
     def __init__(self, pattern, view_func, name=None):
-        self.pattern = pattern
+        self._regex = pattern
         self.view_func = view_func
         self.name = name
         self.rx = None
 
     def compile(self):
-        self.rx = re.compile(self.pattern)
+        self.rx = re.compile(self._regex)
 
     def _match(self, path):
         if self.rx is None:
@@ -57,7 +57,7 @@ class UrlPattern:
             args = ()
         else:
             args = match.groups()
-        return self.view_func, args, kwargs, self.name
+        return self.view_func, args, kwargs
 
 
 class LocalUrlPattern(UrlPattern):
@@ -81,7 +81,7 @@ class LocalUrlPattern(UrlPattern):
             match = pattern.resolve(rest_path)
             if match:
                 return match
-        raise NoMatch(path, [self.pattern + ' ' + p.pattern
+        raise NoMatch(path, [self._regex + ' ' + p.pattern
                              for p in self.local_patterns])
 
 
@@ -138,13 +138,17 @@ class UrlResolver:
         """
         request_path = request.path.lstrip('/')
         for pattern in self.patterns:
-            match = pattern.resolve(request_path)
-            if match:
-                return self.call_view(request, *match, transport=transport)
-        raise NoMatch(request_path, [p.pattern for p in self.patterns])
+            try:
+                match = pattern.resolve(request_path)
+            except:
+                continue
+            if not match:
+                continue
+            return self.call_view(request, *match, transport=transport)
+        raise NoMatch(request_path, [p._regex for p in self.patterns])
 
     @asyncio.coroutine
-    def call_view(self, request, view, args, kwargs, name, transport=None):
+    def call_view(self, request, view, args, kwargs, transport=None):
         """ Calls a view function for request."""
         # FIXME: transport to class-based view
         return view(request, *args, **kwargs)
@@ -161,6 +165,5 @@ class UrlResolver:
         """
         result = []
         for url in urlpatterns:
-            url.compile()
             result.append(url)
         return result
