@@ -12,7 +12,7 @@
 #
 # inspired by aiohttp.examples.mpsrv.HttpServer
 # @see https://github.com/fafhrd91/aiohttp
-
+from http.cookies import SimpleCookie
 
 import os
 import signal
@@ -86,6 +86,9 @@ class HttpServer(aiohttp.server.ServerHttpProtocol):
 
         request.META = self.get_meta(request, self.transport)
         request.GET = self.get_get_params(request)
+        request.COOKIES = self.get_cookies(request)
+        request.POST = self.get_post_params(request)
+
         # dispatching and computing response
         response = yield from self.get_response(request)
         # force response not to keep-alive connection (for ab test, mostly)
@@ -125,6 +128,12 @@ class HttpServer(aiohttp.server.ServerHttpProtocol):
         return meta
 
     @staticmethod
+    def get_cookies(request):
+        cookie_header = request.headers.get('Cookie')
+        cookies = SimpleCookie(cookie_header)
+        return dict((k, c.value) for k, c in cookies.items())
+
+    @staticmethod
     def get_get_params(request):
         """ Constructs GET dict for request.
 
@@ -148,6 +157,11 @@ class HttpServer(aiohttp.server.ServerHttpProtocol):
             else:
                 get[key] = value
         return get
+
+    @staticmethod
+    def get_post_params(request):
+        # FIXME: implement
+        return {}
 
 
 class ChildProcess:
