@@ -175,6 +175,10 @@ class ChildProcess:
     def protocol_factory(self):
         return HttpServer(debug=True, keep_alive=75)
 
+    def before_loop(self):
+        # heartbeat
+        asyncio.async(self.heartbeat())
+
     def start(self):
         # start server
         self.loop = loop = asyncio.new_event_loop()
@@ -191,8 +195,7 @@ class ChildProcess:
         print('Starting srv worker process {} on {}'.format(
             os.getpid(), x.getsockname()))
 
-        # heartbeat
-        asyncio.async(self.heartbeat())
+        self.before_loop()
 
         asyncio.get_event_loop().run_forever()
         os._exit(0)
@@ -232,6 +235,7 @@ class Worker:
     """
 
     _started = False
+    child_process_class = ChildProcess
 
     def __init__(self, loop, args, sock):
         self.loop = loop
@@ -262,7 +266,7 @@ class Worker:
             asyncio.set_event_loop(None)
 
             # setup process
-            process = ChildProcess(up_read, down_write, args, sock)
+            process = self.child_process_class(up_read, down_write, args, sock)
             process.start()
 
     @asyncio.coroutine
@@ -329,6 +333,7 @@ class Worker:
 
 class Superviser:
     """ Master process for http server."""
+    worker_class = Worker
 
     def __init__(self, args):
         self.loop = asyncio.get_event_loop()
@@ -347,7 +352,7 @@ class Superviser:
 
         # start processes
         for idx in range(self.args.workers):
-            self.workers.append(Worker(self.loop, self.args, sock))
+            self.workers.append(self.worker_class(self.loop, self.args, sock))
 
         self.loop.add_signal_handler(signal.SIGINT, lambda: self.loop.stop())
         self.loop.add_signal_handler(signal.SIGTERM, lambda: self.loop.stop())
