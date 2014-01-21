@@ -361,7 +361,8 @@ class Superviser:
             self.delpid()
 
     def waitpid(self):
-        while True:
+        child = True
+        while child:
             try:
                 child, exitcode = os.waitpid(-1, os.P_NOWAIT)
                 print("Child process %s exited with return code %s"
