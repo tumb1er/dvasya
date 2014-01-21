@@ -361,8 +361,13 @@ class Superviser:
             self.delpid()
 
     def waitpid(self):
-        child, exitcode = os.waitpid(-1, os.P_NOWAIT)
-        print("Child process %s exited with return code %s" % (child, exitcode))
+        while True:
+            try:
+                child, exitcode = os.waitpid(-1, os.P_NOWAIT)
+                print("Child process %s exited with return code %s"
+                      % (child, exitcode))
+            except:
+                break
 
     def prefork(self):
         if not self.args.no_daemon:
