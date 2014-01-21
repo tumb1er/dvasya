@@ -373,9 +373,6 @@ class Superviser:
             if pid > 0:
                 # Exit first parent.
                 sys.exit(0)
-            # FIXME
-            self.loop.stop()
-            asyncio.set_event_loop(None)
         except OSError as e:
             message = "Fork #1 failed: {}\n".format(e)
             sys.stderr.write(message)
@@ -392,10 +389,6 @@ class Superviser:
             if pid > 0:
                 # Exit from second parent.
                 sys.exit(0)
-            # FIXME
-            self.loop.stop()
-            asyncio.set_event_loop(None)
-            self.loop = asyncio.new_event_loop()
         except OSError as e:
             message = "Fork #2 failed: {}\n".format(e)
             sys.stderr.write(message)
