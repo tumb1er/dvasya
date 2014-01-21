@@ -24,6 +24,10 @@ ARGS.add_argument(
     default=None, type=str, help='DVASYA_SETTING_MODULE'
 )
 ARGS.add_argument(
+    '--stderr', action="store_true", dest="stderr",
+    default=False, help="don't close stderr and stdout while daemonizing"
+)
+ARGS.add_argument(
     '--no-daemon', action="store_true", dest="no_daemon",
     default=False, help="don't daemonize http server"
 )

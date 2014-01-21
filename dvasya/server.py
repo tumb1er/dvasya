@@ -336,7 +336,6 @@ class Superviser:
     worker_class = Worker
 
     def __init__(self, args):
-        self.loop = asyncio.get_event_loop()
         self.args = args
         self.workers = []
         self.pidfile = os.path.join(os.getcwd(), self.args.pidfile)
@@ -363,6 +362,7 @@ class Superviser:
     def prefork(self):
         if not self.args.no_daemon:
             self.daemonize()
+        self.loop = asyncio.get_event_loop()
 
     def daemonize(self):
         """
@@ -373,6 +373,9 @@ class Superviser:
             if pid > 0:
                 # Exit first parent.
                 sys.exit(0)
+            # FIXME
+            self.loop.stop()
+            asyncio.set_event_loop(None)
         except OSError as e:
             message = "Fork #1 failed: {}\n".format(e)
             sys.stderr.write(message)
@@ -389,6 +392,10 @@ class Superviser:
             if pid > 0:
                 # Exit from second parent.
                 sys.exit(0)
+            # FIXME
+            self.loop.stop()
+            asyncio.set_event_loop(None)
+            self.loop = asyncio.new_event_loop()
         except OSError as e:
             message = "Fork #2 failed: {}\n".format(e)
             sys.stderr.write(message)
@@ -402,13 +409,14 @@ class Superviser:
         sys.stdout.flush()
         sys.stderr.flush()
 
-        # FIXME: what if normal stdout redirect is needed?
         si = open('/dev/null', 'r')
-        so = open('/dev/null', 'a+')
-        se = open('/dev/null', 'a+')
         os.dup2(si.fileno(), sys.stdin.fileno())
-        os.dup2(so.fileno(), sys.stdout.fileno())
-        os.dup2(se.fileno(), sys.stderr.fileno())
+
+        if not self.args.stderr:
+            so = open('/dev/null', 'a+')
+            se = open('/dev/null', 'a+')
+            os.dup2(so.fileno(), sys.stdout.fileno())
+            os.dup2(se.fileno(), sys.stderr.fileno())
 
         pidfile.write("{}\n".format(pid))
         pidfile.close()
@@ -420,6 +428,9 @@ class Superviser:
         f = open('/tmp/atexit.txt', 'w')
         f.write(self.pidfile)
         f.close()
-        os.remove(self.pidfile)
+        try:
+            os.remove(self.pidfile)
+        except IOError:
+            pass
 
 
