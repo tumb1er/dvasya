@@ -355,9 +355,14 @@ class Superviser:
 
         self.loop.add_signal_handler(signal.SIGINT, lambda: self.loop.stop())
         self.loop.add_signal_handler(signal.SIGTERM, lambda: self.loop.stop())
+        self.loop.add_signal_handler(signal.SIGCHLD, self.waitpid)
         self.loop.run_forever()
         if not self.args.no_daemon:
             self.delpid()
+
+    def waitpid(self):
+        child, exitcode = os.waitpid(-1, os.P_NOWAIT)
+        print("Child process %s exited with return code %s" % (child, exitcode))
 
     def prefork(self):
         if not self.args.no_daemon:
