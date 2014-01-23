@@ -20,8 +20,6 @@ def _load_settings():
     cwd = os.getcwd()
     if cwd not in sys.path:
         sys.path.append(cwd)
-    print("current working directory: %s" % cwd)
-    print("settings loaded from module: %s" % module_name)
     module = __import__(module_name, fromlist='*')
     for attr in dir(defaults):
         if not hasattr(module, attr):

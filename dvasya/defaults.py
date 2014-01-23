@@ -13,8 +13,11 @@ LOGGING = {
     'disable_existing_loggers': False,
     'formatters': {
         'default': {
-            'format': '%(created)s %(levelname): %(message)',
-            'datefmt': '%Y-%m-%D %H%M%S',
+            'format': '%(name)s %(asctime)s %(levelname)s: %(message)s',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
+        },
+        'errors': {
+            'format': '%(asctime)s %(method)s %(path)s - %(message)s',
         }
     },
     'handlers': {
@@ -30,7 +33,7 @@ LOGGING = {
         'errors': {
             'level': 'ERROR',
             'class': 'logging.StreamHandler',
-            'formatter': 'default',
+            'formatter': 'errors',
         },
     },
     'loggers': {

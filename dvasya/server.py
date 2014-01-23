@@ -13,7 +13,6 @@
 # inspired by aiohttp.examples.mpsrv.HttpServer
 # @see https://github.com/fafhrd91/aiohttp
 from http.cookies import SimpleCookie
-
 import os
 import signal
 import socket
@@ -22,11 +21,12 @@ from urllib import parse
 import time
 import sys
 import atexit
-import asyncio
 
+import asyncio
 import aiohttp.server
 from aiohttp import websocket
 
+from dvasya.conf import settings
 from dvasya.logging import getLogger
 from dvasya.response import HttpResponseNotFound
 from dvasya.urls import UrlResolver, NoMatch
@@ -37,6 +37,14 @@ class HttpServer(aiohttp.server.ServerHttpProtocol):
 
     resolver = UrlResolver.autodiscover()
     logger = getLogger('dvasya.request')
+
+    def __init__(self, *, loop=None, keep_alive=None, debug=settings.DEBUG,
+                 log=logger, access_log=aiohttp.server.ACCESS_LOG,
+                 access_log_format=aiohttp.server.ACCESS_LOG_FORMAT):
+        super().__init__(loop=loop, keep_alive=keep_alive, debug=debug, log=log,
+                         access_log=access_log,
+                         access_log_format=access_log_format)
+
 
     @asyncio.coroutine
     def get_response(self, request):
@@ -49,6 +57,25 @@ class HttpServer(aiohttp.server.ServerHttpProtocol):
             return result
         except NoMatch as e:
             return HttpResponseNotFound(e)
+
+    def log_exception(self, *args, **kwargs):
+        """ Отключаем метод записи ошибки в лог из aiohttp
+        т.к. он не передает всех необходимых параметров"""
+        pass
+
+    def handle_error(self, status=500, message=None, payload=None, exc=None,
+                     headers=None):
+        if status == 500:
+            extra_data = {}
+            try:
+                extra_data['method'] = payload.method
+                extra_data['path'] = payload.path
+                extra_data['headers'] = dict(self.get_http_headers(payload).items())
+            except:
+                pass
+            self.logger.exception("Uncaught error", extra=extra_data)
+        return super().handle_error(status, message, payload, exc, headers)
+
 
     def get_http_headers(self, message):
         """ Transforms headers from aiohttp.message to more usable form.
@@ -63,6 +90,31 @@ class HttpServer(aiohttp.server.ServerHttpProtocol):
         for hdr, val in message.headers:
             headers.add_header(hdr, val)
         return headers
+
+    def construct_request(self, message):
+        request = aiohttp.Request(self.transport, message.method,
+                                  message.path, message.version)
+        request.headers = self.get_http_headers(message)
+        request.META = self.get_meta(request, self.transport)
+        request.GET = self.get_get_params(request)
+        request.COOKIES = self.get_cookies(request)
+        request.POST = self.get_post_params(request)
+        return request
+
+    def process_response(self, request, response):
+        # force response not to keep-alive connection (for ab test, mostly)
+        response.force_close()
+        # attaches transport for aiohttp.HttpMessage and sends headers
+        response.attach_transport(self.transport, request)
+        # if response has content, sends it to client
+        if response.content:
+            # FIXME: other encodings?
+            if isinstance(response.content, str):
+                response.write(bytearray(response.content, "utf-8"))
+            else:
+                response.write(response.content)
+        # finishes response
+        response.write_eof()
 
     @asyncio.coroutine
     def handle_request(self, message, payload):
@@ -79,30 +131,12 @@ class HttpServer(aiohttp.server.ServerHttpProtocol):
 
         @rtype : None
         """
-        request = aiohttp.Request(self.transport, message.method,
-                                  message.path, message.version)
-        request.headers = self.get_http_headers(message)
-
-        request.META = self.get_meta(request, self.transport)
-        request.GET = self.get_get_params(request)
-        request.COOKIES = self.get_cookies(request)
-        request.POST = self.get_post_params(request)
+        request = self.construct_request(message)
 
         # dispatching and computing response
         response = yield from self.get_response(request)
-        # force response not to keep-alive connection (for ab test, mostly)
-        response.force_close()
-        # attaches transport for aiohttp.HttpMessage and sends headers
-        response.attach_transport(self.transport, request)
-        # if response has content, sends it to client
-        if response.content:
-            # FIXME: other encodings?
-            if isinstance(response.content, str):
-                response.write(bytearray(response.content, "utf-8"))
-            else:
-                response.write(response.content)
-        # finishes response
-        response.write_eof()
+
+        self.process_response(request, response)
 
     @staticmethod
     def get_meta(request, transport):
@@ -165,6 +199,7 @@ class HttpServer(aiohttp.server.ServerHttpProtocol):
 
 class ChildProcess:
     """ Worker process for http server."""
+    logger = getLogger('dvasya.worker')
 
     def __init__(self, up_read, down_write, args, sock):
         self.up_read = up_read
@@ -187,12 +222,13 @@ class ChildProcess:
         def stop():
             self.loop.stop()
             os._exit(0)
+
         loop.add_signal_handler(signal.SIGINT, stop)
 
         f = loop.create_server(self.protocol_factory, sock=self.sock)
         srv = loop.run_until_complete(f)
         x = srv.sockets[0]
-        print('Starting srv worker process {} on {}'.format(
+        self.logger.info('Starting srv worker process {} on {}'.format(
             os.getpid(), x.getsockname()))
 
         self.before_loop()
@@ -215,7 +251,8 @@ class ChildProcess:
             try:
                 msg = yield from reader.read()
             except aiohttp.EofStream:
-                print('Superviser is dead, {} stopping...'.format(os.getpid()))
+                self.logger.error(
+                    'Superviser is dead, {} stopping...'.format(os.getpid()))
                 self.loop.stop()
                 break
 
@@ -236,6 +273,7 @@ class Worker:
 
     _started = False
     child_process_class = ChildProcess
+    logger = getLogger('dvasya.worker')
 
     def __init__(self, loop, args, sock):
         self.loop = loop
@@ -279,10 +317,11 @@ class Worker:
             if (time.monotonic() - self.ping) < delay * 2:
                 writer.ping()
             else:
-                print('Worker process {} became unresponsive'.format(
-                    self.pid))
+                self.logger.error(
+                    'Worker process {} became unresponsive'.format(
+                        self.pid))
                 if force_kill:
-                    print("Restarting process: {}".format(self.pid))
+                    self.logger.info("Restarting process: {}".format(self.pid))
                     self.kill()
                     self.start()
                 return
@@ -293,8 +332,9 @@ class Worker:
             try:
                 msg = yield from reader.read()
             except aiohttp.EofStream:
-                print('Restart unresponsive worker process: {}'.format(
-                    self.pid))
+                self.logger.info(
+                    'Restart unresponsive worker process: {}'.format(
+                        self.pid))
                 self.kill()
                 self.start()
                 return
@@ -334,6 +374,7 @@ class Worker:
 class Superviser:
     """ Master process for http server."""
     worker_class = Worker
+    logger = getLogger('dvasya.superviser')
 
     def __init__(self, args):
         self.args = args
@@ -365,8 +406,8 @@ class Superviser:
         while child:
             try:
                 child, exitcode = os.waitpid(-1, os.P_NOWAIT)
-                print("Child process %s exited with return code %s"
-                      % (child, exitcode))
+                self.logger.info("Child process %s exited with return code %s"
+                                 % (child, exitcode))
             except:
                 break
 
@@ -408,7 +449,7 @@ class Superviser:
         # Open pidfile.
         pid = str(os.getpid())
         pidfile = open(self.pidfile, 'w+')
-        
+
         # Redirect standard file descriptors.
         sys.stdout.flush()
         sys.stderr.flush()
