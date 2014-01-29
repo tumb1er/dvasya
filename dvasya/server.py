@@ -165,7 +165,7 @@ class HttpServer(aiohttp.server.ServerHttpProtocol):
         cookie_header = request.headers.get('Cookie')
         if cookie_header is None:
             return {}
-        cookies = SimpleCookie(cookie_header)
+        cookies = SimpleCookie(str(cookie_header))
         return dict((k, c.value) for k, c in cookies.items())
 
     @staticmethod
