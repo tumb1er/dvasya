@@ -272,6 +272,7 @@ class Worker:
     """
 
     _started = False
+    child_kill_signal = signal.SIGKILL
     child_process_class = ChildProcess
     logger = getLogger('dvasya.worker')
 
@@ -368,7 +369,7 @@ class Worker:
         self.heartbeat_task.cancel()
         self.rtransport.close()
         self.wtransport.close()
-        os.kill(self.pid, signal.SIGTERM)
+        os.kill(self.pid, self.child_kill_signal)
 
 
 class Superviser:
