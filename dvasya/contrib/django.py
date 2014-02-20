@@ -2,6 +2,7 @@
 
 # $Id: $
 from inspect import isgenerator
+
 from dvasya.response import HttpResponse
 
 
@@ -18,7 +19,13 @@ class GenericViewMixin:
         if isgenerator(response):
             response = yield from response
         if not isinstance(response, HttpResponse):
-            response = HttpResponse(content=response.content,
-                                    status=response.status_code,
-                                    content_type=response.get('content-type'))
+            dvasya_response = HttpResponse(content=response.content,
+                                           status=response.status_code,
+                                           content_type=response['Content-Type'])
+            for header, value in response._headers.values():
+                if header == "Content-Type":
+                    continue
+                dvasya_response.add_header(header, value)
+            response = dvasya_response
+
         return response

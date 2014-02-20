@@ -8,16 +8,22 @@
 # with a small part of Django HttpResponse interface
 #
 # @see https://docs.djangoproject.com/en/dev/ref/request-response/
+from collections import deque
 import json
 
 from wsgiref.handlers import format_date_time
 from aiohttp.protocol import HttpMessage
 from aiohttp.server import RESPONSES
+import sys
+import dvasya
 from dvasya.conf import settings
 
 
 class HttpResponse(HttpMessage):
     status_code = 200
+
+    SERVER_SOFTWARE = 'Python/{0[0]}.{0[1]} dvasya/{1}'.format(
+        sys.version_info, dvasya.VERSION)
 
     HOP_HEADERS = {
         'Connection',
@@ -38,6 +44,10 @@ class HttpResponse(HttpMessage):
         self.status = status or self.status_code
         self.content = content
         self.content_type = content_type
+
+    def convert_header_titles(self):
+        """ Возвращаем UPPER заголовки в Camel-Case."""
+        self.headers = deque((k.title(), v) for k,v in self.headers)
 
     def attach_transport(self, transport, request):
         """ Attaches transport to response.
@@ -86,6 +96,7 @@ class HttpResponse(HttpMessage):
         super()._add_default_headers()
         self.headers.extend((('Date', format_date_time(None)),
                              ('Server', self.SERVER_SOFTWARE),))
+        self.convert_header_titles()
 
 
 class JSONResponse(HttpResponse):
