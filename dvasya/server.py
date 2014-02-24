@@ -252,7 +252,7 @@ class ChildProcess:
                 msg = yield from reader.read()
             except aiohttp.EofStream:
                 self.logger.error(
-                    'Superviser is dead, {} stopping...'.format(os.getpid()))
+                    'Supervisor is dead, {} stopping...'.format(os.getpid()))
                 self.loop.stop()
                 break
 
@@ -372,32 +372,39 @@ class Worker:
         os.kill(self.pid, self.child_kill_signal)
 
 
-class Superviser:
+class Supervisor:
     """ Master process for http server."""
     worker_class = Worker
-    logger = getLogger('dvasya.superviser')
+    logger = getLogger('dvasya.supervisor')
 
     def __init__(self, args):
         self.args = args
         self.workers = []
         self.pidfile = os.path.join(os.getcwd(), self.args.pidfile)
 
-    def start(self):
+    def open_socket(self):
         # bind socket
         sock = self.sock = socket.socket()
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.bind((self.args.host, self.args.port))
         sock.listen(1024)
         sock.setblocking(False)
+        return sock
+
+    def add_signal_handlers(self):
+        self.loop.add_signal_handler(signal.SIGINT, lambda: self.loop.stop())
+        self.loop.add_signal_handler(signal.SIGTERM, lambda: self.loop.stop())
+        self.loop.add_signal_handler(signal.SIGCHLD, self.waitpid)
+
+    def start(self):
+        sock = self.open_socket()
         self.prefork()
 
         # start processes
         for idx in range(self.args.workers):
             self.workers.append(self.worker_class(self.loop, self.args, sock))
 
-        self.loop.add_signal_handler(signal.SIGINT, lambda: self.loop.stop())
-        self.loop.add_signal_handler(signal.SIGTERM, lambda: self.loop.stop())
-        self.loop.add_signal_handler(signal.SIGCHLD, self.waitpid)
+        self.add_signal_handlers()
         self.loop.run_forever()
         if not self.args.no_daemon:
             self.delpid()
