@@ -137,7 +137,8 @@ class DvasyaHttpClient:
     def _get_transport_extra(self):
         """ Prepares extra data for transport."""
         return {
-            'peername': self.peername
+            'peername': self.peername,
+            'socket': mock.MagicMock()
         }
 
     def _get_extra_info(self, key, default=None):

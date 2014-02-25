@@ -6,4 +6,4 @@
 # Django Views for Async APIs
 
 
-VERSION = '0.6.0'
+VERSION = '0.6.1'
