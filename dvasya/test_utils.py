@@ -151,9 +151,10 @@ class DvasyaHttpClient:
 
 class DvasyaTestCase(unittest.TestCase):
     def setUp(self):
+        super().setUp()
         self.client = DvasyaHttpClient()
 
     def tearDown(self):
+        super().tearDown()
         self.client.finish()
-        #asyncio.set_event_loop(None)
 
