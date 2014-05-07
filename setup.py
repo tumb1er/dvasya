@@ -1,7 +1,19 @@
+import sys
 from distutils.core import setup
 from shutil import copy
 from dvasya import VERSION
 
+install_requires=['aiohttp>=0.6.4,<0.7']
+
+
+PY_VER = sys.version_info
+
+if PY_VER >= (3, 4):
+    pass
+elif PY_VER >= (3, 3):
+    install_requires.append('asyncio')
+else:
+    raise RuntimeError("dvasya doesn't suppport Python earllier than 3.3")
 try:
     copy("scripts/manage.py", "scripts/dvasya-manage")
 except OSError:
@@ -18,5 +30,5 @@ setup(
     author='tumbler',
     author_email='zimbler@gmail.com',
     description='Django Views for AsyncIO APIs',
-    install_requires=['aiohttp']
+    install_requires=['aiohttp>=0.6.4,<0.7']
 )
