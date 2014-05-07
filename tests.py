@@ -216,7 +216,6 @@ class DvasyaRequestParserTestCase(DvasyaServerTestCaseBase):
             f2content,
             terminator
         ))
-        print(body)
         headers = {
             'Content-Type': 'multipart/form-data; boundary=%s' % boundary
         }
