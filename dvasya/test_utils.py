@@ -99,7 +99,6 @@ class DvasyaHttpClient:
         transport = mock.Mock()
         result = BytesIO()
         transport.write = mock.Mock(side_effect=result.write)
-
         yield from request.send(transport, transport)
         return result.getvalue()
 
@@ -111,12 +110,14 @@ class DvasyaHttpClient:
         fill input stream with request data,
         runs request handler and parses response.
         """
-        request = HttpRequest(self._method, self._path, headers=self._headers)
+        request = HttpRequest(self._method, self._path, headers=self._headers,
+                              data=self._inputstream)
         data = yield from self._serialize_request(request)
 
         http_stream = self._server.reader.set_parser(
             self._server._request_parser)
         self._server.reader.feed_data(data)
+        self._server.reader.feed_data(self._inputstream)
         message = yield from http_stream.read()
         payload = self._server.reader.set_parser(
             aiohttp.HttpPayloadParser(message))
@@ -145,8 +146,6 @@ class DvasyaHttpClient:
         if not body and data:
             body = bytes(urlencode(data), encoding="utf-8")
         return self._run_request('POST', url, body, headers=headers)
-
-
 
     def finish(self):
         """ Stops reactor loop."""

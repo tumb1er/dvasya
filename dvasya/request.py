@@ -3,9 +3,10 @@
 # $Id: $
 import re
 from tempfile import NamedTemporaryFile
-from urllib.parse import parse_qs
+from urllib.parse import parse_qs, parse_qsl
 import aiohttp
 import asyncio
+from dvasya.utils import qsl_to_dict
 
 
 class LazyPost:
@@ -101,7 +102,7 @@ class FormUrlEncodedBodyMemoryParser:
                 break
             request.body += buffer
             chunks += 1
-        self.__data = parse_qs(request.body)
+        self.__data = qsl_to_dict(parse_qsl(request.body.decode('utf-8')))
         return self.__data, self.__files
 
 

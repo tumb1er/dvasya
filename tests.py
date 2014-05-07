@@ -1,10 +1,12 @@
 # coding: utf-8
 
 # $Id: $
+from collections import OrderedDict
 import copy
 import json
 import os
 from unittest import mock
+from urllib import parse
 
 from aiohttp.protocol import HttpMessage
 
@@ -17,7 +19,7 @@ from dvasya.test_utils import DvasyaTestCase
 from testapp import views
 
 
-class UrlResolverTestCase(DvasyaTestCase):
+class DvasyaServerTestCaseBase(DvasyaTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -71,6 +73,9 @@ class UrlResolverTestCase(DvasyaTestCase):
         self.assertIn("No match for path", result.content)
         self.assertEqual(result.content_type, "text/html")
 
+
+class UrlResolverTestCase(DvasyaServerTestCaseBase):
+
     def testFunctionView(self):
         url = "/function/"
         result = self.client.get(url)
@@ -113,11 +118,40 @@ class UrlResolverTestCase(DvasyaTestCase):
         self.assertFunctionViewOK(expected, result)
 
 
-class DvasyaRequestParserTestCase(DvasyaTestCase):
+class DvasyaRequestParserTestCase(DvasyaServerTestCaseBase):
+
     def testSimpleGet(self):
-        result = self.client.get('/function/')
+        url = '/function/?arg1=val1&arg2=val2?&arg2=val3#hashtag'
+        result = self.client.get(url)
+        expected = self.expected
+        expected['request']['GET'] = {
+            'arg1': 'val1',
+            'arg2': ['val2?', 'val3']
+        }
+        self.assertFunctionViewOK(expected, result)
 
-
-    def testSimplePost404(self):
-        result = self.client.post('/', data={'a': 1})
-        self.assertNoMatch(result)
+    def testUrlEncodedPost(self):
+        url = '/function/?arg1=val1'
+        data = OrderedDict((
+            ('arg1', 'val1'),
+            ('arg2', 'val2')
+        ))
+        body = parse.urlencode(data)
+        result = self.client.post(url, data=data,
+                                  headers={
+            'Content-Type': 'application/x-www-form-urlencoded'
+        })
+        expected = self.expected
+        expected['request'].update({
+            'GET': {'arg1': 'val1'},
+            'DATA': body,
+            'POST': {
+                'arg1': 'val1',
+                'arg2': 'val2',
+            }
+        })
+        expected['request']['META'].update({
+            'CONTENT_TYPE': 'application/x-www-form-urlencoded',
+            'CONTENT_LENGTH': str(len(body))
+        })
+        self.assertFunctionViewOK(expected, result)

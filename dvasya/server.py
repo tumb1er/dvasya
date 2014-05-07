@@ -32,6 +32,7 @@ from dvasya.logging import getLogger
 from dvasya.request import DvasyaRequest
 from dvasya.response import HttpResponseNotFound
 from dvasya.urls import UrlResolver, NoMatch
+from dvasya.utils import qsl_to_dict
 
 
 class HttpServer(aiohttp.server.ServerHttpProtocol):
@@ -182,16 +183,7 @@ class HttpServer(aiohttp.server.ServerHttpProtocol):
         """
         get = dict()
         qs = parse.urlparse(request.path).query
-        query = parse.parse_qsl(qs)
-        for key, value in query:
-            if key in get:
-                prev_value = get[key]
-                if type(prev_value) is not list:
-                    get[key] = [prev_value]
-                get[key].append(value)
-            else:
-                get[key] = value
-        return get
+        return qsl_to_dict(parse.parse_qsl(qs))
 
 
 class ChildProcess:

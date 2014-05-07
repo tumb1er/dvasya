@@ -29,13 +29,16 @@ def function_view(*args, **kwargs):
 
 
 def dump_params(request, *args, **kwargs):
+    data = request.DATA
+    if not isinstance(data, str) and data is not None:
+        data = data.decode('utf-8')
     result = {
         'request': {
             'GET': request.GET,
             'POST': request.POST,
             'FILES': request.FILES,
             'META': request.META,
-            'DATA': request.DATA
+            'DATA': data
         },
         'args': args,
         'kwargs': kwargs
