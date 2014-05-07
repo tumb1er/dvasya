@@ -10,6 +10,8 @@ Framework for creating asynchronous REST APIs in Django Class-based views style.
 but it is possible to use eventloop.run_in_executor() to run SQL queries in
 separate thread pool.
 
+[![Build Status](https://travis-ci.org/tumb1er/dvasya.svg?branch=master)](https://travis-ci.org/tumb1er/dvasya)
+
 ## Quick start
 
 An example project could be found in `testapp` module.
