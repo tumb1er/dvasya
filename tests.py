@@ -100,9 +100,8 @@ class UrlResolverTestCase(DvasyaServerTestCaseBase):
         expected = self.expected
         self.assertFunctionViewOK(expected, result)
 
-
     def testIncludedArgsKwargs(self):
-        url = "/include/test_args/123/kw1_val/"
+        url = "/include/test_args_kwargs/123/kw1_val/"
         result = self.client.get(url)
         expected = self.expected
         # as in Django, args are hidden if kwargs present
@@ -110,6 +109,13 @@ class UrlResolverTestCase(DvasyaServerTestCaseBase):
         expected['kwargs'] = {'kwarg': 'kw1_val'}
         self.assertFunctionViewOK(expected, result)
 
+    def testIncludedArgs(self):
+        url = "/include/test_args/123/val/"
+        result = self.client.get(url)
+        expected = self.expected
+        # as in Django, args are hidden if kwargs present
+        expected['args'] = ['123', 'val']
+        self.assertFunctionViewOK(expected, result)
 
     def testClassBasedView(self):
         url = "/class/not_used/"
