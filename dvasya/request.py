@@ -6,6 +6,7 @@ from tempfile import NamedTemporaryFile
 from urllib.parse import parse_qs, parse_qsl
 import aiohttp
 import asyncio
+from dvasya.conf import settings
 from dvasya.utils import qsl_to_dict
 
 
@@ -103,12 +104,12 @@ class FormUrlEncodedBodyMemoryParser:
 
 
 class RawBodyFileParser:
-    temp_dir = '/tmp/dvasya/'
+    temp_dir = settings.FILE_UPLOAD_TEMP_DIR
 
     def __init__(self, payload):
         self.payload = payload
-        self.__data = None
-        self.__files = None
+        self.__data = {}
+        self.__files = {}
 
     @asyncio.coroutine
     def parse_payload(self, request):

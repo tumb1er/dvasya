@@ -8,6 +8,9 @@ ROOT_URLCONF = 'urls'
 # debug flag
 DEBUG = True
 
+# temporary directory for files
+FILE_UPLOAD_TEMP_DIR = '/tmp/'
+
 # internal logging setup
 LOGGING = {
     'disable_existing_loggers': False,

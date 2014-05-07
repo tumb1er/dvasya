@@ -76,6 +76,8 @@ class DvasyaHttpClient:
 
         self._loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self._loop)
+        if not isinstance(request_body, bytes):
+            request_body = bytes(request_body, encoding='utf-8')
         self._inputstream = request_body
         self._method = method
         self._path = path

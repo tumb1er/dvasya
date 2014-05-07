@@ -170,3 +170,22 @@ class DvasyaRequestParserTestCase(DvasyaServerTestCaseBase):
         self.assertFunctionViewOK(expected, result)
         result = self.client.put(url, data=data, headers=headers)
         self.assertFunctionViewOK(expected, result)
+
+    def testPlainTextPost(self):
+        url = '/function/?arg1=val1'
+        body = "just some text"
+        headers = {
+            'Content-Type': 'text/plain'
+        }
+        expected = self.expected
+        expected['request'].update({
+            'GET': {'arg1': 'val1'},
+            'DATA': body,
+            'POST': {}
+        })
+        expected['request']['META'].update({
+            'CONTENT_TYPE': 'text/plain',
+            'CONTENT_LENGTH': str(len(body))
+        })
+        result = self.client.post(url, body=body, headers=headers)
+        self.assertFunctionViewOK(expected, result)

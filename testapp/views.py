@@ -30,6 +30,9 @@ def function_view(*args, **kwargs):
 
 def dump_params(request, *args, **kwargs):
     data = request.DATA
+    if hasattr(data, 'file'):
+        f = data.file
+        data = f.read()
     if not isinstance(data, str) and data is not None:
         data = data.decode('utf-8')
     result = {
