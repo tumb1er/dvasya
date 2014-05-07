@@ -179,7 +179,7 @@ class HttpServer(aiohttp.server.ServerHttpProtocol):
         @return request metadata dictionary
         """
         get = dict()
-        path, qs = parse.splitquery(request.path)
+        qs = parse.urlparse(request.path).query
         query = parse.parse_qsl(qs)
         for key, value in query:
             if key in get:
