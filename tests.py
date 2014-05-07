@@ -4,19 +4,20 @@
 import copy
 import json
 import os
-from aiohttp.protocol import HttpMessage
 from unittest import mock
+
+from aiohttp.protocol import HttpMessage
+
 
 os.environ.setdefault("DVASYA_SETTINGS_MODULE", 'testapp.settings')
 
 from dvasya.response import HttpResponse
 from dvasya.test_utils import DvasyaTestCase
 
-from testapp.views import patched_function_view
+from testapp import views
 
 
 class UrlResolverTestCase(DvasyaTestCase):
-
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -41,12 +42,22 @@ class UrlResolverTestCase(DvasyaTestCase):
             "kwargs": {}
         }
 
+    def setUp(self):
+        super().setUp()
+        self.view_patcher = mock.patch('testapp.views.dump_params',
+                                       side_effect=views.dump_params)
+        self.mock = self.view_patcher.start()
+
+    def tearDown(self):
+        self.view_patcher.stop()
+        super().tearDown()
+
     @property
     def expected(self):
-        return copy.copy(self.__expected)
+        return copy.deepcopy(self.__expected)
 
-    def assertFunctionViewOK(self, expected, result, view_patcher):
-        self.assertTrue(view_patcher.called)
+    def assertFunctionViewOK(self, expected, result):
+        self.assertTrue(self.mock.called)
         self.assertEqual(result.status_code, 200)
         self.assertEqual(result.content_type, "application/json")
         content = json.loads(result.content)
@@ -60,54 +71,52 @@ class UrlResolverTestCase(DvasyaTestCase):
         self.assertIn("No match for path", result.content)
         self.assertEqual(result.content_type, "text/html")
 
-    @mock.patch('testapp.views.patched_function_view',
-                side_effect=patched_function_view)
-    def testFunctionView(self, view_patcher):
+    def testFunctionView(self):
         url = "/function/"
         result = self.client.get(url)
         expected = self.expected
-        self.assertFunctionViewOK(expected, result, view_patcher)
+        self.assertFunctionViewOK(expected, result)
 
-    @mock.patch('testapp.views.patched_function_view',
-                side_effect=patched_function_view)
-    def testReverseWithQuery(self, view_patcher):
+    def testReverseWithQuery(self):
         url = "/function/?arg1=val1"
         result = self.client.get(url)
         expected = self.expected
         expected['request']['GET'] = {"arg1": 'val1'}
-        self.assertFunctionViewOK(expected, result, view_patcher)
+        self.assertFunctionViewOK(expected, result)
 
-    @mock.patch('testapp.views.patched_function_view',
-                side_effect=patched_function_view)
-    def testReverseWithEOLRegex(self, view_patcher):
+    def testReverseWithEOLRegex(self):
         url = "/function/other/"
         result = self.client.get(url)
         self.assertNoMatch(result)
 
-    @mock.patch('testapp.views.patched_function_view',
-                side_effect=patched_function_view)
-    def testSimpleIncluded(self, view_patcher):
+    def testSimpleIncluded(self):
         url = "/include/test_include/"
         result = self.client.get(url)
         expected = self.expected
-        self.assertFunctionViewOK(expected, result, view_patcher)
+        self.assertFunctionViewOK(expected, result)
 
-    @mock.patch('testapp.views.patched_function_view',
-                side_effect=patched_function_view)
-    def testIncludedArgsKwargs(self, view_patcher):
+
+    def testIncludedArgsKwargs(self):
         url = "/include/test_args/123/kw1_val/"
         result = self.client.get(url)
         expected = self.expected
-        expected['args'] = ['123']
+        # as in Django, args are hidden if kwargs present
+        expected['args'] = []
         expected['kwargs'] = {'kwarg': 'kw1_val'}
-        self.assertFunctionViewOK(expected, result, view_patcher)
+        self.assertFunctionViewOK(expected, result)
 
 
-class DvasyaServerTestCase(DvasyaTestCase):
+    def testClassBasedView(self):
+        url = "/class/not_used/"
+        result = self.client.get(url)
+        expected = self.expected
+        self.assertFunctionViewOK(expected, result)
 
-    def testSimpleGet404(self):
-        result = self.client.get('/')
-        self.assertNoMatch(result)
+
+class DvasyaRequestParserTestCase(DvasyaTestCase):
+    def testSimpleGet(self):
+        result = self.client.get('/function/')
+
 
     def testSimplePost404(self):
         result = self.client.post('/', data={'a': 1})

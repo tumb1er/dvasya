@@ -28,7 +28,7 @@ def function_view(*args, **kwargs):
     return patched_function_view(*args, **kwargs)
 
 
-def dump_params(args, kwargs, request):
+def dump_params(request, *args, **kwargs):
     result = {
         'request': {
             'GET': request.GET,
@@ -48,12 +48,16 @@ def dump_params(args, kwargs, request):
 @asyncio.coroutine
 def patched_function_view(request, *args, **kwargs):
     yield from request.parse_payload()
-    return dump_params(args, kwargs, request)
+    return dump_params(request, *args, **kwargs)
 
 
 class ClassBasedView(View):
-    get = dump_params
-    post = dump_params
+
+    def any_method(self, request, *args, **kwargs):
+        return dump_params(request, *args, **kwargs)
+
+    get = any_method
+    post = any_method
 
 
 class TestView(View):

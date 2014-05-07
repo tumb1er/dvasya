@@ -2,16 +2,16 @@
 
 # $Id: $
 from dvasya.urls import patterns, url, include
-from testapp.views import function_view, ClassBasedView
+from testapp import views
 
 
 included = patterns('',
-    url('^test_args/([\d]+)/(?P<kwarg>[\w]+)/', function_view),
-    url('^test_include/$', function_view)
+    url('^test_args/([\d]+)/(?P<kwarg>[\w]+)/', views.function_view),
+    url('^test_include/$', views.function_view)
 )
 
 urlpatterns = patterns('',
     url('^include/', include('testapp.urls.included')),
-    url('^class/', ClassBasedView.as_view()),
-    url('^function/$', function_view),
+    url('^class/', views.ClassBasedView.as_view()),
+    url('^function/$', views.function_view),
 )
