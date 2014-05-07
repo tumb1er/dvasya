@@ -57,11 +57,19 @@ class DvasyaRequest(aiohttp.Request):
     POST = LazyPost()
     FILES = LazyPost()
 
+    def _close_request_fields(self, attr):
+        try:
+            fields = getattr(self, attr)
+            if isinstance(fields, dict):
+                for v in fields.values():
+                    if hasattr(v, 'file'):
+                        v.close()
+        except asyncio.InvalidStateError:
+            pass
+
     def close(self):
-        if isinstance(self.POST, dict):
-            for v in self.POST.values():
-                if hasattr(v, 'file'):
-                    v.close()
+        self._close_request_fields('POST')
+        self._close_request_fields('FILES')
 
 
 class FormUrlEncodedBodyMemoryParser:

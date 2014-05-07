@@ -17,3 +17,10 @@ class DvasyaServerTestCase(DvasyaTestCase):
         self.assertEqual(result.status_code, 404)
         self.assertIn("No match for path", result.content)
         self.assertEqual(result.content_type, "text/html")
+
+    def testSimplePost404(self):
+        result = self.client.post('/', data={'a': 1})
+        self.assertIsInstance(result, HttpResponse)
+        self.assertEqual(result.status_code, 404)
+        self.assertIn("No match for path", result.content)
+        self.assertEqual(result.content_type, "text/html")

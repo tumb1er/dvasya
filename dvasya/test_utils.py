@@ -3,6 +3,7 @@
 # $Id: $
 from io import BytesIO
 import unittest
+from urllib.parse import urlencode
 
 from aiohttp.client import HttpRequest
 import asyncio
@@ -65,6 +66,8 @@ class DvasyaHttpClient:
 
         Starts async loop, passes http request to server, captures response.
         """
+        path = self._fix_url(path)
+
         self._loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self._loop)
         self._inputstream = request_body
@@ -121,14 +124,23 @@ class DvasyaHttpClient:
         """ Captures output stream to separate buffer."""
         self._buffer.feed_data(bytes)
 
-    def get(self, url, headers=None):
-        """ Perform GET request."""
+    def _fix_url(self, url):
         if not url.startswith('http://'):
             if not url.startswith('/'):
                 url = '/' + url
             url = 'http://localhost' + url
+        return url
 
+    def get(self, url, headers=None):
+        """ Perform GET request."""
         return self._run_request('GET', url, b'', headers=headers)
+
+    def post(self, url, headers=None, data=None, body=b''):
+        if not body and data:
+            body = bytes(urlencode(data), encoding="utf-8")
+        return self._run_request('POST', url, body, headers=headers)
+
+
 
     def finish(self):
         """ Stops reactor loop."""
