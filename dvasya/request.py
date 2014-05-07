@@ -163,7 +163,7 @@ def parse_options_header(header, options=None):
 class MultipartBodyParser:
     header_len = 300
     data_buffer_size = 100000
-    temp_dir = '/tmp/dvasya'
+    temp_dir = settings.FILE_UPLOAD_TEMP_DIR
 
     def __init__(self, payload, boundary):
         self.payload = payload
