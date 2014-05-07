@@ -1,6 +1,8 @@
 # coding: utf-8
 
 # $Id: $
+import shutil
+import asyncio
 from dvasya.response import HttpResponse
 from dvasya.views import View
 
@@ -26,3 +28,15 @@ class TestView(View):
     def get(self, request, *args, **kwargs):
         agent = request.headers.get('user-agent', '')
         return HttpResponse("<H2>Agent: {}</H2>".format(agent))
+
+    @asyncio.coroutine
+    def post(self, request, *args, **kwargs):
+        post = request.POST
+        files = request.FILES
+        return HttpResponse("<H2>POST: </H2>\n{}\n<H2>FILES: </H2>\n{}\n".format(post, files))
+
+    def process_payload(self):
+        if int(self.request.headers['Content-Length']) > 10000000:
+            self.request.transport.close()
+        return super().process_payload()
+

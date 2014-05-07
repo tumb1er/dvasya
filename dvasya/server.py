@@ -29,6 +29,7 @@ from aiohttp import websocket
 from dvasya.conf import settings
 from dvasya.cookies import parse_cookie
 from dvasya.logging import getLogger
+from dvasya.request import DvasyaRequest
 from dvasya.response import HttpResponseNotFound
 from dvasya.urls import UrlResolver, NoMatch
 
@@ -92,14 +93,14 @@ class HttpServer(aiohttp.server.ServerHttpProtocol):
             headers.add_header(hdr, val)
         return headers
 
-    def construct_request(self, message):
-        request = aiohttp.Request(self.transport, message.method,
+    def construct_request(self, message, payload):
+        request = DvasyaRequest(self.transport, message.method,
                                   message.path, message.version)
         request.headers = self.get_http_headers(message)
         request.META = self.get_meta(request, self.transport)
         request.GET = self.get_get_params(request)
         request.COOKIES = self.get_cookies(request)
-        request.POST = self.get_post_params(request)
+        request.payload = payload
         return request
 
     def process_response(self, request, response):
@@ -116,6 +117,7 @@ class HttpServer(aiohttp.server.ServerHttpProtocol):
                 response.write(response.content)
         # finishes response
         response.write_eof()
+        request.close()
 
     @asyncio.coroutine
     def handle_request(self, message, payload):
@@ -132,7 +134,7 @@ class HttpServer(aiohttp.server.ServerHttpProtocol):
 
         @rtype : None
         """
-        request = self.construct_request(message)
+        request = self.construct_request(message, payload)
 
         # dispatching and computing response
         response = yield from self.get_response(request)
@@ -190,11 +192,6 @@ class HttpServer(aiohttp.server.ServerHttpProtocol):
             else:
                 get[key] = value
         return get
-
-    @staticmethod
-    def get_post_params(request):
-        # FIXME: implement
-        return {}
 
 
 class ChildProcess:

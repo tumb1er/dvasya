@@ -84,6 +84,11 @@ class View(object):
                               self.http_method_not_allowed)
         else:
             handler = self.http_method_not_allowed
+
+        data, files = yield from self.process_payload()
+        self.request.POST = data
+        self.request.FILES = files
+
         result = handler(request, *args, **kwargs)
         if asyncio.tasks.iscoroutine(result):
             result = yield from result
@@ -103,3 +108,11 @@ class View(object):
 
     def _allowed_methods(self):
         return [m.upper() for m in self.http_method_names if hasattr(self, m)]
+
+    @asyncio.coroutine
+    def process_payload(self):
+        value = yield from self.request.parse_payload()
+        data, files = value
+        return data, files
+
+
