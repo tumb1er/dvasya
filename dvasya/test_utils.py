@@ -139,13 +139,28 @@ class DvasyaHttpClient:
         return url
 
     def get(self, url, headers=None):
-        """ Perform GET request."""
         return self._run_request('GET', url, b'', headers=headers)
+
+    def head(self, url, headers=None):
+        return self._run_request('HEAD', url, b'', headers=headers)
+
+    def delete(self, url, headers=None):
+        return self._run_request('DELETE', url, b'', headers=headers)
 
     def post(self, url, headers=None, data=None, body=b''):
         if not body and data:
             body = bytes(urlencode(data), encoding="utf-8")
         return self._run_request('POST', url, body, headers=headers)
+
+    def put(self, url, headers=None, data=None, body=b''):
+        if not body and data:
+            body = bytes(urlencode(data), encoding="utf-8")
+        return self._run_request('PUT', url, body, headers=headers)
+
+    def patch(self, url, headers=None, data=None, body=b''):
+        if not body and data:
+            body = bytes(urlencode(data), encoding="utf-8")
+        return self._run_request('PATCH', url, body, headers=headers)
 
     def finish(self):
         """ Stops reactor loop."""

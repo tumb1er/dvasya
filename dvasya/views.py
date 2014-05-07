@@ -22,6 +22,7 @@ class View(object):
     __inited__ = False
 
     http_method_names = ['get', 'post', 'put', 'delete', 'head', 'options', 'trace']
+    http_empty_body_methods = ['get', 'delete', 'head', 'options']
 
     def __init__(self, **kwargs):
         """
@@ -79,15 +80,19 @@ class View(object):
         self.request = request
         self.args = args
         self.kwargs = kwargs
-        if request.method.lower() in self.http_method_names:
-            handler = getattr(self, request.method.lower(),
+        method = request.method.lower()
+        if method in self.http_method_names:
+            handler = getattr(self, method,
                               self.http_method_not_allowed)
         else:
             handler = self.http_method_not_allowed
-
-        data, files = yield from self.process_payload()
-        self.request.POST = data
-        self.request.FILES = files
+        if method not in self.http_empty_body_methods:
+            data, files = yield from self.process_payload()
+            self.request.POST = data
+            self.request.FILES = files
+        else:
+            self.request.POST = {}
+            self.request.FILES = {}
 
         result = handler(request, *args, **kwargs)
         if asyncio.tasks.iscoroutine(result):
@@ -114,5 +119,3 @@ class View(object):
         value = yield from self.request.parse_payload()
         data, files = value
         return data, files
-
-

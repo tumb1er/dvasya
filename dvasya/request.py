@@ -41,7 +41,7 @@ class DvasyaRequest(aiohttp.Request):
         self.__payload = value
 
     def create_parser(self):
-        content_type = self.headers['CONTENT-TYPE']
+        content_type = self.headers['CONTENT-TYPE'] or ''
         if content_type.startswith('multipart/form-data'):
             _, boundary_field = content_type.split('; ')
             boundary = boundary_field.split('=')[1]
@@ -52,10 +52,6 @@ class DvasyaRequest(aiohttp.Request):
             return RawBodyFileParser(self.__payload)
 
     def parse_payload(self, parser=None):
-        if self.method.lower() in ('get', 'head', 'options'):
-            self.POST = {}
-            self.FILES = {}
-            return ({}, {})
         parser = parser or self.create_parser()
         data, files = yield from parser.parse_payload(self)
         self.POST = data

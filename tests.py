@@ -127,13 +127,17 @@ class UrlResolverTestCase(DvasyaServerTestCaseBase):
 class DvasyaRequestParserTestCase(DvasyaServerTestCaseBase):
 
     def testSimpleGet(self):
-        url = '/function/?arg1=val1&arg2=val2?&arg2=val3#hashtag'
-        result = self.client.get(url)
+        url = '/class/?arg1=val1&arg2=val2?&arg2=val3#hashtag'
         expected = self.expected
         expected['request']['GET'] = {
             'arg1': 'val1',
             'arg2': ['val2?', 'val3']
         }
+        result = self.client.get(url)
+        self.assertFunctionViewOK(expected, result)
+        result = self.client.head(url)
+        self.assertFunctionViewOK(expected, result)
+        result = self.client.delete(url)
         self.assertFunctionViewOK(expected, result)
 
     def testUrlEncodedPost(self):
@@ -143,10 +147,7 @@ class DvasyaRequestParserTestCase(DvasyaServerTestCaseBase):
             ('arg2', 'val2')
         ))
         body = parse.urlencode(data)
-        result = self.client.post(url, data=data,
-                                  headers={
-            'Content-Type': 'application/x-www-form-urlencoded'
-        })
+
         expected = self.expected
         expected['request'].update({
             'GET': {'arg1': 'val1'},
@@ -160,4 +161,12 @@ class DvasyaRequestParserTestCase(DvasyaServerTestCaseBase):
             'CONTENT_TYPE': 'application/x-www-form-urlencoded',
             'CONTENT_LENGTH': str(len(body))
         })
+        headers = {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        }
+        result = self.client.post(url, data=data, headers=headers)
+        self.assertFunctionViewOK(expected, result)
+        result = self.client.patch(url, data=data, headers=headers)
+        self.assertFunctionViewOK(expected, result)
+        result = self.client.put(url, data=data, headers=headers)
         self.assertFunctionViewOK(expected, result)

@@ -60,8 +60,11 @@ class ClassBasedView(View):
         return dump_params(request, *args, **kwargs)
 
     get = any_method
+    head = any_method
+    delete = any_method
     post = any_method
-
+    patch = any_method
+    put = any_method
 
 class TestView(View):
     def get(self, request, *args, **kwargs):
