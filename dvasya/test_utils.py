@@ -73,6 +73,8 @@ class DvasyaHttpClient:
         self._headers = headers or {}
         self._transport = mock.Mock()
         self._transport.write = mock.Mock(side_effect=self._capture_response)
+        self._transport._conn_lost = 0
+
         self._transport.get_extra_info = mock.Mock(
             side_effect=self._get_extra_info)
         self._create_response()
@@ -88,7 +90,8 @@ class DvasyaHttpClient:
         transport = mock.Mock()
         result = BytesIO()
         transport.write = mock.Mock(side_effect=result.write)
-        yield from request.send(transport)
+
+        yield from request.send(transport, transport)
         return result.getvalue()
 
     @asyncio.coroutine
@@ -102,11 +105,11 @@ class DvasyaHttpClient:
         request = HttpRequest(self._method, self._path, headers=self._headers)
         data = yield from self._serialize_request(request)
 
-        http_stream = self._server.stream.set_parser(
+        http_stream = self._server.reader.set_parser(
             self._server._request_parser)
-        self._server.stream.feed_data(data)
+        self._server.reader.feed_data(data)
         message = yield from http_stream.read()
-        payload = self._server.stream.set_parser(
+        payload = self._server.reader.set_parser(
             aiohttp.HttpPayloadParser(message))
 
         yield from self._server.handle_request(message, payload)

@@ -93,7 +93,7 @@ class HttpServer(aiohttp.server.ServerHttpProtocol):
         return headers
 
     def construct_request(self, message):
-        request = aiohttp.Request(self.transport, message.method,
+        request = aiohttp.Request(self.reader, message.method,
                                   message.path, message.version)
         request.headers = self.get_http_headers(message)
         request.META = self.get_meta(request, self.transport)
@@ -106,7 +106,7 @@ class HttpServer(aiohttp.server.ServerHttpProtocol):
         # force response not to keep-alive connection (for ab test, mostly)
         response.force_close()
         # attaches transport for aiohttp.HttpMessage and sends headers
-        response.attach_transport(self.transport, request)
+        response.attach_transport(self.writer, request)
         # if response has content, sends it to client
         if response.content:
             # FIXME: other encodings?
@@ -244,7 +244,7 @@ class ChildProcess:
         write_transport, _ = yield from self.loop.connect_write_pipe(
             aiohttp.StreamProtocol, os.fdopen(self.down_write, 'wb'))
 
-        reader = read_proto.set_parser(websocket.WebSocketParser)
+        reader = read_proto.reader.set_parser(websocket.WebSocketParser)
         writer = websocket.WebSocketWriter(write_transport)
 
         while True:
@@ -352,7 +352,7 @@ class Worker:
             aiohttp.StreamProtocol, os.fdopen(up_write, 'wb'))
 
         # websocket protocol
-        reader = proto.set_parser(websocket.WebSocketParser)
+        reader = proto.reader.set_parser(websocket.WebSocketParser)
         writer = websocket.WebSocketWriter(write_transport)
 
         # store info
