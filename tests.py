@@ -238,3 +238,18 @@ class DvasyaRequestParserTestCase(DvasyaServerTestCaseBase):
         })
         result = self.client.post(url, body=body, headers=headers)
         self.assertFunctionViewOK(expected, result)
+
+
+class TODOTestCase(DvasyaTestCase):
+
+    def testCookieSupport(self):
+        self.skipTest("FIXME")
+
+    def test500ErrorHandling(self):
+        self.skipTest("FIXME")
+
+    def test405NotAllowed(self):
+        self.skipTest("FIXME")
+
+    def testJSONResponse(self):
+        self.skipTest("FIXME")
