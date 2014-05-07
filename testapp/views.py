@@ -1,6 +1,7 @@
 # coding: utf-8
 
 # $Id: $
+import json
 import shutil
 import asyncio
 from dvasya.response import HttpResponse
@@ -22,6 +23,37 @@ class DefaultView(View):
 def dump_args_view(request, *args, **kwargs):
     body = u"<h3>Arguments: {}</h3><h3>Keywords: {}</h3>".format(args, kwargs)
     return HttpResponse(body, 200)
+
+def function_view(*args, **kwargs):
+    return patched_function_view(*args, **kwargs)
+
+
+def dump_params(args, kwargs, request):
+    result = {
+        'request': {
+            'GET': request.GET,
+            'POST': request.POST,
+            'FILES': request.FILES,
+            'META': request.META,
+            'DATA': request.DATA
+        },
+        'args': args,
+        'kwargs': kwargs
+    }
+    body = json.dumps(result)
+    response = HttpResponse(body, 200, content_type="application/json")
+    return response
+
+
+@asyncio.coroutine
+def patched_function_view(request, *args, **kwargs):
+    yield from request.parse_payload()
+    return dump_params(args, kwargs, request)
+
+
+class ClassBasedView(View):
+    get = dump_params
+    post = dump_params
 
 
 class TestView(View):

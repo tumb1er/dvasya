@@ -1,6 +1,7 @@
 # coding: utf-8
 
 # $Id: $
+import email
 from io import BytesIO
 import unittest
 from urllib.parse import urlencode
@@ -36,8 +37,13 @@ class ResponseParser:
     def parse_http_message(self, message):
         """ Parses HTTP headers."""
         self.message = message
+        headers = email.message.Message()
+        for hdr, val in message.headers:
+            headers.add_header(hdr, val)
         self.response = HttpResponse(message.reason, status=message.code,
-                                     http_version=message.version)
+                                     http_version=message.version,
+                                     content_type=headers.get('content-type'))
+        self.response.headers = headers
 
     def parse_http_content(self, content):
         """ Parses response body, dealing with transfer-encodings."""

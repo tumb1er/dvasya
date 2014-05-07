@@ -137,6 +137,7 @@ class UrlResolver:
         @rtype: dvasya.response.HttpResponse
         """
         request_path = request.path.lstrip('/')
+        request_path = request_path.split('?', 1)[0]
         for pattern in self.patterns:
             try:
                 match = pattern.resolve(request_path)

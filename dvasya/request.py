@@ -29,6 +29,7 @@ class DvasyaRequest(aiohttp.Request):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.__payload = None
+        self.body = None
 
     @property
     def payload(self) -> aiohttp.parsers.DataQueue:
@@ -50,12 +51,22 @@ class DvasyaRequest(aiohttp.Request):
             return RawBodyFileParser(self.__payload)
 
     def parse_payload(self, parser=None):
+        if self.method.lower() in ('get', 'head', 'options'):
+            self.POST = {}
+            self.FILES = {}
+            return ({}, {})
         parser = parser or self.create_parser()
         data, files = yield from parser.parse_payload(self)
+        self.POST = data
+        self.FILES = files
         return (data, files)
 
     POST = LazyPost()
     FILES = LazyPost()
+
+    @property
+    def DATA(self):
+        return self.body
 
     def _close_request_fields(self, attr):
         try:
