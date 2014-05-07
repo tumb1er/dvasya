@@ -35,6 +35,14 @@ def dump_params(request, *args, **kwargs):
         data = f.read()
     if not isinstance(data, str) and data is not None:
         data = data.decode('utf-8')
+    files = request.FILES
+    for k, v in files.items():
+        if hasattr(v, 'file'):
+            files[k] = v.file.read().decode('utf-8')
+    post = request.POST
+    for k, v in post.items():
+        if not isinstance(v, str):
+            post[k] = v.decode('utf-8')
     result = {
         'request': {
             'GET': request.GET,

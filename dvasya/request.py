@@ -31,7 +31,7 @@ class DvasyaRequest(aiohttp.Request):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.__payload = None
-        self.body = None
+        self.body = b''
 
     @property
     def payload(self) -> aiohttp.parsers.DataQueue:
@@ -170,7 +170,6 @@ class MultipartBodyParser:
         self.boundary = bytes('--' + boundary, encoding='utf-8')
         self.boundary_len = len(self.boundary)
         self.buffer = aiohttp.parsers.StreamParser()
-        self.buffer.set_parser(self)
         self.__data = {}
         self.__files = {}
 
@@ -182,11 +181,16 @@ class MultipartBodyParser:
                 buffer = yield from self.payload.read()
                 try:
                     self.buffer.feed_data(buffer)
+                    if not self.buffer._parser:
+                        self.buffer.set_parser(self)
                 except ValueError as e:
+                    print(e)
                     pass
 
             except aiohttp.parsers.EofStream:
                 break
+        for k, v in self.__files.items():
+            v.file.seek(0)
         return self.__data, self.__files
 
     def parse_header_line(self, header_line):

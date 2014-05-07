@@ -27,7 +27,7 @@ class DvasyaServerTestCaseBase(DvasyaTestCase):
             "request":
                 {"POST": {},
                  "GET": {},
-                 "DATA": None,
+                 "DATA": '',
                  "FILES": {},
                  "META": {
                      "USER_AGENT": HttpMessage.SERVER_SOFTWARE,
@@ -75,7 +75,6 @@ class DvasyaServerTestCaseBase(DvasyaTestCase):
 
 
 class UrlResolverTestCase(DvasyaServerTestCaseBase):
-
     def testFunctionView(self):
         url = "/function/"
         result = self.client.get(url)
@@ -125,7 +124,6 @@ class UrlResolverTestCase(DvasyaServerTestCaseBase):
 
 
 class DvasyaRequestParserTestCase(DvasyaServerTestCaseBase):
-
     def testSimpleGet(self):
         url = '/class/?arg1=val1&arg2=val2?&arg2=val3#hashtag'
         expected = self.expected
@@ -185,6 +183,58 @@ class DvasyaRequestParserTestCase(DvasyaServerTestCaseBase):
         })
         expected['request']['META'].update({
             'CONTENT_TYPE': 'text/plain',
+            'CONTENT_LENGTH': str(len(body))
+        })
+        result = self.client.post(url, body=body, headers=headers)
+        self.assertFunctionViewOK(expected, result)
+
+    def testMultipartPost(self):
+        url = '/function/?arg1=val1'
+        boundary = 'Asrf456BGe4h'
+        delimiter = '--%s' % boundary
+        terminator = '--%s--' % boundary
+        f1content = 'file_one_content\r\nwith_second_line'
+        f2content = 'second_file_content'
+        body = '\r\n'.join((
+            delimiter,
+            'Content-Disposition: form-data; name="arg1"',
+            '',
+            'val1',
+            delimiter,
+            'Content-Disposition: form-data; name="arg2"',
+            '',
+            'val2',
+            delimiter,
+            'Content-Disposition: form-data; name="f1"; filename="fn1.txt"',
+            'Content-Type: text/plain',
+            '',
+            f1content,
+            delimiter,
+            'Content-Disposition: form-data; name="f2"; filename="fn2.txt"',
+            'Content-Type: text/plain',
+            '',
+            f2content,
+            terminator
+        ))
+        print(body)
+        headers = {
+            'Content-Type': 'multipart/form-data; boundary=%s' % boundary
+        }
+        expected = self.expected
+        expected['request'].update({
+            'GET': {'arg1': 'val1'},
+            'DATA': None,
+            'POST': {
+                'arg1': 'val1',
+                'arg2': 'val2'
+            },
+            'FILES': {
+                'f1': f1content,
+                'f2': f2content
+            }
+        })
+        expected['request']['META'].update({
+            'CONTENT_TYPE': ('multipart/form-data; boundary=%s' % boundary),
             'CONTENT_LENGTH': str(len(body))
         })
         result = self.client.post(url, body=body, headers=headers)

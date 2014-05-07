@@ -93,6 +93,7 @@ class View(object):
         else:
             self.request.POST = {}
             self.request.FILES = {}
+            self.request.body
 
         result = handler(request, *args, **kwargs)
         if asyncio.tasks.iscoroutine(result):
