@@ -334,12 +334,12 @@ class Worker:
 
     @asyncio.coroutine
     def connect(self, pid, up_write, down_read):
+        self.logger.info("connecting to pid %s" % pid)
         # setup pipes
         read_transport, proto = yield from self.loop.connect_read_pipe(
             aiohttp.StreamProtocol, os.fdopen(down_read, 'rb'))
         write_transport, _ = yield from self.loop.connect_write_pipe(
             aiohttp.StreamProtocol, os.fdopen(up_write, 'wb'))
-
         # websocket protocol
         reader = proto.reader.set_parser(websocket.WebSocketParser)
         writer = websocket.WebSocketWriter(write_transport)
@@ -381,14 +381,21 @@ class Supervisor:
         return sock
 
     def add_signal_handlers(self):
-        self.loop.add_signal_handler(signal.SIGINT, lambda: self.loop.stop())
-        self.loop.add_signal_handler(signal.SIGTERM, lambda: self.loop.stop())
+        self.loop.add_signal_handler(signal.SIGINT, self.stop)
+        self.loop.add_signal_handler(signal.SIGTERM, self.stop)
         self.loop.add_signal_handler(signal.SIGCHLD, self.waitpid)
+
+    def stop(self):
+        self.logger.info("stopping workers...")
+        for worker in self.workers:
+            self.logger.debug("kill %s " % worker.pid)
+            worker.kill()
+        self.loop.stop()
 
     def start(self):
         sock = self.open_socket()
         self.prefork()
-
+        self.logger.info("starting workers...")
         # start processes
         for idx in range(self.args.workers):
             self.workers.append(self.worker_class(self.loop, self.args, sock))
