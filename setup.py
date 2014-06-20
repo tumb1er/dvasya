@@ -3,7 +3,7 @@ from distutils.core import setup
 from shutil import copy
 from dvasya import VERSION
 
-install_requires=['aiohttp>=0.7.1,<0.8']
+install_requires=['aiohttp>=0.8,<0.9']
 
 
 PY_VER = sys.version_info
@@ -16,7 +16,7 @@ else:
     raise RuntimeError("dvasya doesn't suppport Python earllier than 3.3")
 try:
     copy("scripts/manage.py", "scripts/dvasya-manage")
-except OSError:
+except (OSError, IOError):
     pass
 
 
@@ -30,5 +30,5 @@ setup(
     author='tumbler',
     author_email='zimbler@gmail.com',
     description='Django Views for AsyncIO APIs',
-    install_requires=['aiohttp>=0.6.4,<0.7']
+    install_requires=install_requires
 )

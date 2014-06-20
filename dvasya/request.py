@@ -3,7 +3,7 @@
 # $Id: $
 import re
 from tempfile import NamedTemporaryFile
-from urllib.parse import parse_qs, parse_qsl
+from urllib.parse import parse_qsl
 import aiohttp
 import asyncio
 from dvasya.conf import settings
@@ -173,7 +173,6 @@ class MultipartBodyParser:
         self.__data = {}
         self.__files = {}
 
-#    @asyncio.coroutine
     def parse_payload(self, request):
         request.body = None
         while True:
@@ -230,6 +229,5 @@ class MultipartBodyParser:
             try:
                 yield from input.readuntil(b'--\r\n\r\n', limit=6)
                 break
-            except ValueError:
+            except aiohttp.errors.LineLimitExceededParserError:
                 continue
-

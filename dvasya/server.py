@@ -90,7 +90,7 @@ class HttpServer(aiohttp.server.ServerHttpProtocol):
         @rtype: email.message.Message
         """
         headers = email.message.Message()
-        for hdr, val in message.headers:
+        for hdr, val in message.headers.items():
             headers.add_header(hdr, val)
         return headers
 

@@ -38,7 +38,7 @@ class ResponseParser:
         """ Parses HTTP headers."""
         self.message = message
         headers = email.message.Message()
-        for hdr, val in message.headers:
+        for hdr, val in message.headers.items():
             headers.add_header(hdr, val)
         self.response = HttpResponse(message.reason, status=message.code,
                                      http_version=message.version,
@@ -101,7 +101,7 @@ class DvasyaHttpClient:
         transport = mock.Mock()
         result = BytesIO()
         transport.write = mock.Mock(side_effect=result.write)
-        yield from request.send(transport, transport)
+        request.send(transport, transport)
         return result.getvalue()
 
     @asyncio.coroutine
