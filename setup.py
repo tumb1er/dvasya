@@ -3,7 +3,7 @@ from distutils.core import setup
 from shutil import copy
 from dvasya import VERSION
 
-install_requires=['aiohttp>=0.8,<0.9']
+install_requires=['aiohttp>=0.9.1,<0.10']
 
 
 PY_VER = sys.version_info
