@@ -34,11 +34,11 @@ class DvasyaRequest(aiohttp.Request):
         self.body = b''
 
     @property
-    def payload(self) -> aiohttp.parsers.DataQueue:
+    def payload(self) -> aiohttp.streams.DataQueue:
         return self.__payload
 
     @payload.setter
-    def payload(self, value: aiohttp.parsers.DataQueue):
+    def payload(self, value: aiohttp.streams.DataQueue):
         self.__payload = value
 
     def create_parser(self):

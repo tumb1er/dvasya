@@ -25,6 +25,8 @@ import atexit
 import asyncio
 import aiohttp.server
 from aiohttp import websocket
+from aiohttp.log import access_log, server_log
+from aiohttp.server import ACCESS_LOG_FORMAT
 
 from dvasya.conf import settings
 from dvasya.cookies import parse_cookie
@@ -41,12 +43,15 @@ class HttpServer(aiohttp.server.ServerHttpProtocol):
     resolver = UrlResolver.autodiscover()
     logger = getLogger('dvasya.request')
 
-    def __init__(self, *, loop=None, keep_alive=None, debug=settings.DEBUG,
-                 log=logger, access_log=aiohttp.server.ACCESS_LOG,
-                 access_log_format=aiohttp.server.ACCESS_LOG_FORMAT):
-        super().__init__(loop=loop, keep_alive=keep_alive, debug=debug, log=log,
-                         access_log=access_log,
-                         access_log_format=access_log_format)
+    def __init__(self, *, loop=None, keep_alive=None,
+                 timeout=15, tcp_keepalive=True, allowed_methods=(),
+                 debug=False, log=server_log, access_log=access_log,
+                 access_log_format=ACCESS_LOG_FORMAT, **kwargs):
+        super().__init__(loop=loop, keep_alive=keep_alive,
+                         timeout=timeout, tcp_keepalive=tcp_keepalive,
+                         allowed_methods=allowed_methods, debug=debug,
+                         log=log, access_log=access_log,
+                         access_log_format=access_log_format, **kwargs)
 
 
     @asyncio.coroutine
