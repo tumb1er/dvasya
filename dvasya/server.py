@@ -12,7 +12,6 @@
 #
 # inspired by aiohttp.examples.mpsrv.HttpServer
 # @see https://github.com/fafhrd91/aiohttp
-from http.cookies import SimpleCookie
 import os
 import signal
 import socket
@@ -21,14 +20,12 @@ from urllib import parse
 import time
 import sys
 import atexit
-
 import asyncio
+
 import aiohttp.server
 from aiohttp import websocket
 from aiohttp.log import access_log, server_log
 from aiohttp.server import ACCESS_LOG_FORMAT
-
-from dvasya.conf import settings
 from dvasya.cookies import parse_cookie
 from dvasya.logging import getLogger
 from dvasya.request import DvasyaRequest
@@ -78,7 +75,8 @@ class HttpServer(aiohttp.server.ServerHttpProtocol):
             try:
                 extra_data['method'] = payload.method
                 extra_data['path'] = payload.path
-                extra_data['headers'] = dict(self.get_http_headers(payload).items())
+                extra_data['headers'] = dict(
+                    self.get_http_headers(payload).items())
             except:
                 pass
             self.logger.exception("Uncaught error", extra=extra_data)
@@ -101,7 +99,7 @@ class HttpServer(aiohttp.server.ServerHttpProtocol):
 
     def construct_request(self, message, payload):
         request = DvasyaRequest(self.reader, message.method,
-                                  message.path, message.version)
+                                message.path, message.version)
         request.headers = self.get_http_headers(message)
         request.META = self.get_meta(request, self.transport)
         request.GET = self.get_get_params(request)
@@ -370,6 +368,7 @@ class Supervisor:
     """ Master process for http server."""
     worker_class = Worker
     logger = getLogger('dvasya.supervisor')
+    _terminating = False
 
     def __init__(self, args):
         self.args = args
@@ -390,12 +389,20 @@ class Supervisor:
         self.loop.add_signal_handler(signal.SIGTERM, self.stop)
         self.loop.add_signal_handler(signal.SIGCHLD, self.waitpid)
 
+    @asyncio.coroutine
+    def wait_for_children(self):
+        while self.workers:
+            self.logger.debug("waiting for children")
+            yield from asyncio.sleep(1, loop=self.loop)
+        self.loop.stop()
+
     def stop(self):
         self.logger.info("stopping workers...")
+        self._terminating = True
         for worker in self.workers:
             self.logger.debug("kill %s " % worker.pid)
             worker.kill()
-        self.loop.stop()
+        asyncio.Task(self.wait_for_children())
 
     def start(self):
         sock = self.open_socket()
@@ -415,10 +422,27 @@ class Supervisor:
         while child:
             try:
                 child, exitcode = os.waitpid(-1, os.P_NOWAIT)
-                self.logger.info("Child process %s exited with return code %s"
-                                 % (child, exitcode))
+                if child:
+                    self.logger.info(
+                        "Child process %s exited with return code %s"
+                        % (child, exitcode))
+                    if self._terminating:
+                        self.remove_worker(child)
             except:
                 break
+
+    def remove_worker(self, pid):
+        worker = None
+        for worker in self.workers:
+            if worker.pid == pid:
+                break
+        if not worker:
+            self.logger.error("unregistered worker found, exiting")
+            self.loop.stop()
+            return
+        self.logger.debug("removing worker %s" % pid)
+        self.workers.remove(worker)
+
 
     def prefork(self):
         if not self.args.no_daemon:
