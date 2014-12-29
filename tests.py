@@ -10,11 +10,11 @@ from urllib import parse
 
 from aiohttp.protocol import HttpMessage
 
-
 os.environ.setdefault("DVASYA_SETTINGS_MODULE", 'testapp.settings')
 
 from dvasya.response import HttpResponse
 from dvasya.test_utils import DvasyaTestCase
+from dvasya.urls import NoMatch
 
 from testapp import views
 
@@ -38,7 +38,7 @@ class DvasyaServerTestCaseBase(DvasyaTestCase):
                      "ACCEPT_ENCODING": "gzip, deflate",
                      "REMOTE_PORT": "12345",
                      "REMOTE_ADDR": "127.0.0.1"
-                 }
+                 },
                 },
             "args": [],
             "kwargs": {}
@@ -46,6 +46,8 @@ class DvasyaServerTestCaseBase(DvasyaTestCase):
 
     def setUp(self):
         super().setUp()
+        self.maxDiff = 20000
+
         self.view_patcher = mock.patch('testapp.views.dump_params',
                                        side_effect=views.dump_params)
         self.mock = self.view_patcher.start()
@@ -61,7 +63,7 @@ class DvasyaServerTestCaseBase(DvasyaTestCase):
     def assertFunctionViewOK(self, expected, result):
         self.assertTrue(self.mock.called)
         self.assertEqual(result.status_code, 200)
-        self.assertEqual(result.content_type, "application/json")
+        self.assertEqual(result.content_type, "application/json; charset=utf-8")
         content = json.loads(result.content)
         for key in ('request', 'kwargs'):
             self.assertDictEqual(content[key], expected[key])
@@ -90,8 +92,8 @@ class UrlResolverTestCase(DvasyaServerTestCaseBase):
 
     def testReverseWithEOLRegex(self):
         url = "/function/other/"
-        result = self.client.get(url)
-        self.assertNoMatch(result)
+        with self.assertRaises(NoMatch):
+            self.client.get(url)
 
     def testSimpleIncluded(self):
         url = "/include/test_include/"
@@ -149,7 +151,7 @@ class DvasyaRequestParserTestCase(DvasyaServerTestCaseBase):
         expected = self.expected
         expected['request'].update({
             'GET': {'arg1': 'val1'},
-            'DATA': body,
+            'DATA': None,
             'POST': {
                 'arg1': 'val1',
                 'arg2': 'val2',
@@ -252,4 +254,7 @@ class TODOTestCase(DvasyaTestCase):
         self.skipTest("FIXME")
 
     def testJSONResponse(self):
+        self.skipTest("FIXME")
+
+    def testDjangoCompat(self):
         self.skipTest("FIXME")

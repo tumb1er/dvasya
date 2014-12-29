@@ -5,12 +5,9 @@ import email
 from io import BytesIO
 import unittest
 from urllib.parse import urlencode
-
-from aiohttp.client import HttpRequest
 import asyncio
-from aiohttp import HttpResponseParser
-import aiohttp
-from aiohttp.protocol import HttpPayloadParser
+
+from aiohttp import protocol, streams, web, parsers, client
 
 
 try:
@@ -19,7 +16,7 @@ except:
     import mock
 
 from dvasya.response import HttpResponse
-from dvasya.server import HttpServer
+from dvasya.urls import UrlResolver
 
 
 __all__ = ['DvasyaHttpClient', 'DvasyaTestCase']
@@ -53,11 +50,11 @@ class ResponseParser:
         pass
 
     def __call__(self):
-        parser = HttpResponseParser()
+        parser = protocol.HttpResponseParser()
         self.feed_data = self.parse_http_message
         yield from parser(self, self.buffer)
 
-        parser = HttpPayloadParser(self.message)
+        parser = protocol.HttpPayloadParser(self.message)
         self.feed_data = self.parse_http_content
         yield from parser(self, self.buffer)
         return self.response
@@ -66,6 +63,12 @@ class ResponseParser:
 class DvasyaHttpClient:
     """ Test Client for dvasya server. """
     peername = ('127.0.0.1', '12345')
+
+    def create_server(self):
+        router = UrlResolver()
+        app = web.Application(router=router, loop=self._loop)
+        handler = app.make_handler()
+        return handler
 
     def _run_request(self, method, path, request_body, headers=None):
         """ Runs request handling procedure.
@@ -89,8 +92,9 @@ class DvasyaHttpClient:
         self._transport.get_extra_info = mock.Mock(
             side_effect=self._get_extra_info)
         self._create_response()
-        self._server = HttpServer(loop=self._loop)
-        self._server.connection_made(self._transport)
+        self._server = self.create_server()
+        self._handler = self._server()
+        self._handler.connection_made(self._transport)
         self._loop.run_until_complete(
             asyncio.async(self._process_request(), loop=self._loop))
         asyncio.set_event_loop(None)
@@ -102,6 +106,7 @@ class DvasyaHttpClient:
         result = BytesIO()
         transport.write = mock.Mock(side_effect=result.write)
         request.send(transport, transport)
+        yield from request.write_bytes(transport, None)
         return result.getvalue()
 
     @asyncio.coroutine
@@ -112,19 +117,32 @@ class DvasyaHttpClient:
         fill input stream with request data,
         runs request handler and parses response.
         """
-        request = HttpRequest(self._method, self._path, headers=self._headers,
-                              data=self._inputstream)
+        request = client.ClientRequest(self._method, self._path,
+                                       headers=self._headers,
+                                       data=self._inputstream)
         data = yield from self._serialize_request(request)
 
-        http_stream = self._server.reader.set_parser(
-            self._server._request_parser)
-        self._server.reader.feed_data(data)
-        self._server.reader.feed_data(self._inputstream)
-        message = yield from http_stream.read()
-        payload = self._server.reader.set_parser(
-            aiohttp.HttpPayloadParser(message))
+        reader = self._handler.reader
 
-        yield from self._server.handle_request(message, payload)
+        reader.feed_data(data)
+        reader.feed_eof()
+
+        prefix = reader.set_parser(self._handler._request_prefix)
+        yield from prefix.read()
+
+        # read request headers
+        httpstream = reader.set_parser(self._handler._request_parser)
+        message = yield from httpstream.read()
+
+        payload = streams.FlowControlStreamReader(
+            reader, loop=self._loop)
+        reader.set_parser(protocol.HttpPayloadParser(message), payload)
+
+        handler = self._handler.handle_request(message, payload)
+
+        if (asyncio.iscoroutine(handler) or
+                isinstance(handler, asyncio.Future)):
+            yield from handler
 
         response_parser = ResponseParser(self._buffer)
         self.response = yield from response_parser()
@@ -183,7 +201,7 @@ class DvasyaHttpClient:
 
     def _create_response(self):
         """ Prepares response parser buffer."""
-        self._buffer = aiohttp.parsers.ParserBuffer()
+        self._buffer = parsers.ParserBuffer()
 
 
 class DvasyaTestCase(unittest.TestCase):

@@ -3,9 +3,7 @@
 # $Id: $
 import json
 import asyncio
-
-from rest_framework.response import Response
-from rest_framework.views import APIView
+from aiohttp.web import Response
 
 from dvasya.response import HttpResponse
 from dvasya.views import View
@@ -31,43 +29,66 @@ def function_view(*args, **kwargs):
     return patched_function_view(*args, **kwargs)
 
 
+def mvdict_to_listdict(mvdict):
+    result = {}
+    for k, v in mvdict._items:
+        if k in result:
+            value = result[k]
+            if not isinstance(value, list):
+                value = result[k] = [value]
+            value.append(v)
+        else:
+            result[k] = v
+    return result
+
+
 def dump_params(request, *args, **kwargs):
     data = yield from request.post()
     if not data:
         data = yield from request.read()
-    #data = request.DATA
+
     if hasattr(data, 'file'):
         f = data.file
         data = f.read()
-    if not isinstance(data, str) and data is not None:
+
+    if isinstance(data, bytes):
         data = data.decode('utf-8')
-    files = getattr(request, 'FILES', {})
-    for k, v in files.items():
-        if hasattr(v, 'file'):
-            files[k] = v.file.read().decode('utf-8')
-    post = request.POST
-    for k, v in post.items():
-        if not isinstance(v, str):
-            post[k] = v.decode('utf-8')
+
+    post = {}
+    files = {}
+    for k, v in request.POST.items():
+        if isinstance(v, str):
+            post[k] = v
+        else:
+            files[k] = v.file.read().decode("utf-8")
+
+    remote_addr, remote_port = request.transport.get_extra_info("peername")
+    meta = {
+        'REMOTE_ADDR': remote_addr,
+        "REMOTE_PORT": remote_port
+    }
+    meta.update({k.replace('-', '_'): v for k, v in request.headers.items()})
+
+
+
     result = {
         'request': {
-            'GET': request.GET,
-            'POST': request.POST,
+            'GET': mvdict_to_listdict(request.GET),
+            'POST': post,
             'FILES': files,
-            'META': request.META,
-            'DATA': data
+            'META': meta,
+            'DATA': data if not post and not files else None
         },
         'args': args,
         'kwargs': kwargs
     }
     body = json.dumps(result)
-    response = HttpResponse(body, 200, content_type="application/json")
+    response = Response(text=body, status=200, content_type="application/json")
     return response
 
 
 @asyncio.coroutine
 def patched_function_view(request, *args, **kwargs):
-    yield from request.parse_payload()
     return dump_params(request, *args, **kwargs)
 
 
@@ -98,7 +119,3 @@ class TestView(View):
         if int(self.request.headers['Content-Length']) > 10000000:
             self.request.transport.close()
         return super().process_payload()
-
-class SampleView(APIView):
-    def get(self, request, *args, **kwargs):
-        return Response({"ok": True})
