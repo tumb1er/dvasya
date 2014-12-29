@@ -10,6 +10,9 @@
 
 import asyncio
 import re
+import aiohttp
+from aiohttp.abc import AbstractRouter, AbstractMatchInfo
+from aiohttp.web import Response
 from dvasya.conf import settings
 from dvasya.utils import import_object
 
@@ -108,9 +111,26 @@ class NoMatch(Exception):
     pass
 
 
-class UrlResolver:
+class RegexMatchInfo(AbstractMatchInfo):
+    """"""
+
+    def __init__(self, handler, args, kwargs):
+        self._handler = handler
+        self._args = args
+        self._kwargs = kwargs
+
+    def _wrapper(self, request):
+        return self._handler(request, *self._args, **self._kwargs)
+
+    @property
+    def handler(self):
+        return self._wrapper
+
+
+class UrlResolver(AbstractRouter):
     """ Global URL resolver class."""
     resolver = None
+    match_info_class = RegexMatchInfo
 
     @classmethod
     def autodiscover(cls):
@@ -118,41 +138,30 @@ class UrlResolver:
             cls.resolver = UrlResolver()
         return cls.resolver
 
-    def __init__(self):
+    def __init__(self,):
         urlconf_module = settings.ROOT_URLCONF
         urlconf = __import__(urlconf_module, fromlist='urlpatterns')
         self.patterns = self.compile_patterns(urlconf.urlpatterns)
 
     @asyncio.coroutine
-    def dispatch(self, request, transport=None):
+    def resolve(self, request: aiohttp.web.Request) -> RegexMatchInfo:
         """Dispatches a request to a view
 
         @param request: http request object
-        @type request: aiohttp.HttpRequest
+        @type request: aiohttp.web.Request
 
-        @param transport: http transport for current request
-        @type transport: asyncio.transports.Transport
-
-        @return: http response
-        @rtype: dvasya.response.HttpResponse
+        @return: aiohttp url match info
+        @rtype: RegexMatchInfo
         """
+
         request_path = request.path.lstrip('/')
         request_path = request_path.split('?', 1)[0]
         for pattern in self.patterns:
-            try:
-                match = pattern.resolve(request_path)
-            except:
-                continue
+            match = pattern.resolve(request_path)
             if not match:
                 continue
-            return self.call_view(request, *match, transport=transport)
+            return self.match_info_class(*match)
         raise NoMatch(request_path, [p._regex for p in self.patterns])
-
-    @asyncio.coroutine
-    def call_view(self, request, view, args, kwargs, transport=None):
-        """ Calls a view function for request."""
-        # FIXME: transport to class-based view
-        return view(request, *args, **kwargs)
 
     @staticmethod
     def compile_patterns(urlpatterns):

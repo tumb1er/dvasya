@@ -2,8 +2,11 @@
 
 # $Id: $
 import json
-import shutil
 import asyncio
+
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
 from dvasya.response import HttpResponse
 from dvasya.views import View
 
@@ -29,13 +32,16 @@ def function_view(*args, **kwargs):
 
 
 def dump_params(request, *args, **kwargs):
-    data = request.DATA
+    data = yield from request.post()
+    if not data:
+        data = yield from request.read()
+    #data = request.DATA
     if hasattr(data, 'file'):
         f = data.file
         data = f.read()
     if not isinstance(data, str) and data is not None:
         data = data.decode('utf-8')
-    files = request.FILES
+    files = getattr(request, 'FILES', {})
     for k, v in files.items():
         if hasattr(v, 'file'):
             files[k] = v.file.read().decode('utf-8')
@@ -47,7 +53,7 @@ def dump_params(request, *args, **kwargs):
         'request': {
             'GET': request.GET,
             'POST': request.POST,
-            'FILES': request.FILES,
+            'FILES': files,
             'META': request.META,
             'DATA': data
         },
@@ -93,3 +99,6 @@ class TestView(View):
             self.request.transport.close()
         return super().process_payload()
 
+class SampleView(APIView):
+    def get(self, request, *args, **kwargs):
+        return Response({"ok": True})

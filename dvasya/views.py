@@ -86,13 +86,13 @@ class View(object):
                               self.http_method_not_allowed)
         else:
             handler = self.http_method_not_allowed
-        if method not in self.http_empty_body_methods:
-            data, files = yield from self.process_payload()
-            self.request.POST = data
-            self.request.FILES = files
-        else:
-            self.request.POST = {}
-            self.request.FILES = {}
+        # if method not in self.http_empty_body_methods:
+        #     data, files = yield from self.process_payload()
+        #     self.request.POST = data
+        #     self.request.FILES = files
+        # else:
+        #     self.request.POST = {}
+        #     self.request.FILES = {}
 
         result = handler(request, *args, **kwargs)
         if asyncio.tasks.iscoroutine(result):
