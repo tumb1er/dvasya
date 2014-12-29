@@ -95,7 +95,7 @@ class View(object):
         #     self.request.FILES = {}
 
         result = handler(request, *args, **kwargs)
-        if asyncio.tasks.iscoroutine(result):
+        if asyncio.iscoroutine(result):
             result = yield from result
         return result
 
