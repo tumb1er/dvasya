@@ -4,83 +4,14 @@
 import re
 from tempfile import NamedTemporaryFile
 from urllib.parse import parse_qsl
-import aiohttp
 import asyncio
-from aiohttp._multidict import MultiDict, MultiDictProxy
+
+import aiohttp
+from aiohttp.multidict import MultiDict, MultiDictProxy
 from aiohttp.web import Request, FileField
+
 from dvasya.conf import settings
 from dvasya.utils import qsl_to_dict
-
-
-class LazyPost:
-
-
-    def __init__(self):
-        self.data = None
-
-    def __get__(self, instance, owner):
-        if self.data is None:
-            raise asyncio.InvalidStateError("http body not parsed yet")
-        return self.data
-
-    def __set__(self, instance, value):
-        self.data = value
-
-
-class DvasyaRequest(aiohttp.Request):
-    max_memory_body = 10
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.__payload = None
-        self.body = b''
-
-    @property
-    def payload(self) -> aiohttp.streams.DataQueue:
-        return self.__payload
-
-    @payload.setter
-    def payload(self, value: aiohttp.streams.DataQueue):
-        self.__payload = value
-
-    def create_parser(self):
-        content_type = self.headers['CONTENT-TYPE'] or ''
-        if content_type.startswith('multipart/form-data'):
-            _, boundary_field = content_type.split('; ')
-            boundary = boundary_field.split('=')[1]
-            return MultipartBodyParser(self.__payload, boundary)
-        elif content_type.startswith('application/x-www-form-urlencoded'):
-            return FormUrlEncodedBodyMemoryParser(self.__payload)
-        else:
-            return RawBodyFileParser(self.__payload)
-
-    def parse_payload(self, parser=None):
-        parser = parser or self.create_parser()
-        data, files = yield from parser.parse_payload(self)
-        self.POST = data
-        self.FILES = files
-        return (data, files)
-
-    POST = LazyPost()
-    FILES = LazyPost()
-
-    @property
-    def DATA(self):
-        return self.body
-
-    def _close_request_fields(self, attr):
-        try:
-            fields = getattr(self, attr)
-            if isinstance(fields, dict):
-                for v in fields.values():
-                    if hasattr(v, 'file'):
-                        v.close()
-        except asyncio.InvalidStateError:
-            pass
-
-    def close(self):
-        self._close_request_fields('POST')
-        self._close_request_fields('FILES')
 
 
 class FormUrlEncodedBodyMemoryParser:
@@ -176,6 +107,7 @@ class MultipartBodyParser:
         self.__data = {}
         self.__files = {}
 
+    @asyncio.coroutine
     def parse_payload(self, request):
         request.body = None
         while not self.payload.at_eof():
@@ -212,7 +144,7 @@ class MultipartBodyParser:
             field = FileField(name=self.field_name, filename=self.filename,
                               content_type=self.content_type, file=file)
             self.__files.setdefault(self.field_name, field)
-            self.__files[self.field_name].file.write(data)
+            field.file.write(data)
 
     def __call__(self, out, input):
         yield from input.readuntil(self.boundary, limit=self.boundary_len)
@@ -220,13 +152,16 @@ class MultipartBodyParser:
             yield from input.readuntil(b'\r\n', limit=2)
 
             while True:
-                header_line = yield from input.readuntil(b'\r\n', limit=self.header_len)
+                header_line = yield from input.readuntil(b'\r\n',
+                                                         limit=self.header_len)
                 if header_line == b'\r\n':
                     break
                 self.parse_header_line(header_line)
             while True:
                 try:
-                    data = yield from input.readuntil(self.boundary, limit=self.boundary_len + self.data_buffer_size)
+                    data = yield from input.readuntil(
+                        self.boundary,
+                        limit=self.boundary_len + self.data_buffer_size)
                 except ValueError:
                     data = yield from input.read(self.data_buffer_size)
                     self.process_field_data(data)
