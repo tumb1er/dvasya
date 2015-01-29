@@ -15,7 +15,6 @@ try:
 except:
     import mock
 
-from dvasya.response import HttpResponse
 from dvasya.urls import UrlResolver
 
 
@@ -37,10 +36,10 @@ class ResponseParser:
         headers = email.message.Message()
         for hdr, val in message.headers.items():
             headers.add_header(hdr, val)
-        self.response = HttpResponse(message.reason, status=message.code,
-                                     http_version=message.version,
+        self.response = web.Response(reason=message.reason, status=message.code,
+                                     headers=headers,
                                      content_type=headers.get('content-type'))
-        self.response.headers = headers
+        self.response.status_code = message.code
 
     def parse_http_content(self, content):
         """ Parses response body, dealing with transfer-encodings."""
@@ -64,13 +63,19 @@ class DvasyaHttpClient:
     """ Test Client for dvasya server. """
     peername = ('127.0.0.1', '12345')
 
+    def __init__(self, *, urlconf=None, middlewares=None):
+        self.root_urlconf = urlconf
+        self.middlewares = middlewares
+
     def create_server(self):
-        router = UrlResolver()
-        app = web.Application(router=router, loop=self._loop)
+        router = UrlResolver(root_urlconf=self.root_urlconf)
+        app = web.Application(router=router,
+                              loop=self._loop,
+                              middlewares=self.middlewares)
         handler = app.make_handler()
         return handler
 
-    def _run_request(self, method, path, request_body, headers=None):
+    def request(self, method, path, request_body, headers=None):
         """ Runs request handling procedure.
 
         Starts async loop, passes http request to server, captures response.
@@ -87,6 +92,7 @@ class DvasyaHttpClient:
         self._headers = headers or {}
         self._transport = mock.Mock()
         self._transport.write = mock.Mock(side_effect=self._capture_response)
+        self._transport.close._is_coroutine = False
         self._transport._conn_lost = 0
 
         self._transport.get_extra_info = mock.Mock(
@@ -159,28 +165,28 @@ class DvasyaHttpClient:
         return url
 
     def get(self, url, headers=None):
-        return self._run_request('GET', url, b'', headers=headers)
+        return self.request('GET', url, b'', headers=headers)
 
     def head(self, url, headers=None):
-        return self._run_request('HEAD', url, b'', headers=headers)
+        return self.request('HEAD', url, b'', headers=headers)
 
     def delete(self, url, headers=None):
-        return self._run_request('DELETE', url, b'', headers=headers)
+        return self.request('DELETE', url, b'', headers=headers)
 
     def post(self, url, headers=None, data=None, body=b''):
         if not body and data:
             body = bytes(urlencode(data), encoding="utf-8")
-        return self._run_request('POST', url, body, headers=headers)
+        return self.request('POST', url, body, headers=headers)
 
     def put(self, url, headers=None, data=None, body=b''):
         if not body and data:
             body = bytes(urlencode(data), encoding="utf-8")
-        return self._run_request('PUT', url, body, headers=headers)
+        return self.request('PUT', url, body, headers=headers)
 
     def patch(self, url, headers=None, data=None, body=b''):
         if not body and data:
             body = bytes(urlencode(data), encoding="utf-8")
-        return self._run_request('PATCH', url, body, headers=headers)
+        return self.request('PATCH', url, body, headers=headers)
 
     def finish(self):
         """ Stops reactor loop."""
@@ -205,9 +211,17 @@ class DvasyaHttpClient:
 
 
 class DvasyaTestCase(unittest.TestCase):
+
+    # List of middlewares to init in dvasya app
+    middlewares = []
+
+    # ROOT_URLCONF setting form dvasya app
+    root_urlconf = None
+
     def setUp(self):
         super().setUp()
-        self.client = DvasyaHttpClient()
+        self.client = DvasyaHttpClient(urlconf=self.root_urlconf,
+                                       middlewares=self.middlewares)
 
     def tearDown(self):
         super().tearDown()
