@@ -146,8 +146,8 @@ class UrlResolverTestCase(DvasyaServerTestCaseBase):
         self.assertIn("include", result.text)
 
 
-
 class DvasyaResponseTestCase(DvasyaServerTestCaseBase):
+
     def testJSONResponse(self):
         url = "/json/?status=201"
         result = self.client.get(url)
@@ -163,6 +163,17 @@ class DvasyaResponseTestCase(DvasyaServerTestCaseBase):
         cookies = result.cookies
         self.assertDictEqual({"key": "value"}, cookies)
 
+    def test500ErrorHandling(self):
+        url = '/function/'
+        with mock.patch("testapp.views.patched_function_view",
+                        side_effect=ValueError("WTF")):
+            result = self.client.get(url)
+        self.assertEqual(result.status, 500)
+        # check debug formatting
+        self.assertIn("ValueError", result.text)
+        self.assertIn("WTF", result.text)
+        # check traceback to mock is present
+        self.assertIn("raise effect", result.text)
 
 
 class DvasyaRequestParserTestCase(DvasyaServerTestCaseBase):
@@ -309,21 +320,6 @@ class DjangoTestCase(DvasyaTestCase):
 
     def testDjangoRestFrameworkPost(self):
         self.skipTest("FIXME")
-
-
-class TODOTestCase(DvasyaTestCase):
-
-    def test500ErrorHandling(self):
-        url = '/function/'
-        with mock.patch("testapp.views.function_view",
-                        side_effect=ValueError("WTF")):
-            result = self.client.get(url)
-        self.assertEqual(result.status, 500)
-        # check debug formatting
-        self.assertIn("ValueError", result.text)
-        self.assertIn("WTF", result.text)
-        # check traceback to mock is present
-        self.assertIn("raise effect", result.text)
 
 
 
