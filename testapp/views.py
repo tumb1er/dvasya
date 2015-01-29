@@ -5,6 +5,7 @@ import json
 import asyncio
 from aiohttp.web import Response
 from dvasya.views import View
+from dvasya.response import JSONResponse
 
 
 class DefaultView(View):
@@ -23,8 +24,14 @@ def dump_args_view(request, *args, **kwargs):
     body = u"<h3>Arguments: {}</h3><h3>Keywords: {}</h3>".format(args, kwargs)
     return Response(body=body, status=200)
 
+
 def function_view(*args, **kwargs):
     return patched_function_view(*args, **kwargs)
+
+
+def json_view(request, *args, **kwargs):
+    return JSONResponse(status=request.GET.get('status', 200),
+                        data={"ok": True})
 
 
 def mvdict_to_listdict(mvdict):

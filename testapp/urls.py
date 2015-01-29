@@ -9,4 +9,5 @@ urlpatterns = patterns('',
     url('^include/', include('testapp.included_urls.included')),
     url('^class/', views.ClassBasedView.as_view()),
     url('^function/$', views.function_view),
+    url('^json/$', views.json_view),
 )

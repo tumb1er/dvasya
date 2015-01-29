@@ -119,6 +119,7 @@ class RegexMatchInfo(AbstractMatchInfo):
         self._args = args
         self._kwargs = kwargs
 
+    @asyncio.coroutine
     def _wrapper(self, request):
         return self._handler(request, *self._args, **self._kwargs)
 

@@ -22,18 +22,15 @@ from dvasya.conf import settings
 class JSONResponse(Response):
     """ Special HTTPResponse class that dumps data to json format."""
 
-    def __init__(self, *, body=None, status=None, reason=None, headers=None,
-        text=None, content_type=None):
-        if body and not isinstance(body, str):
-            body = json.dumps(body)
-        elif text:
-            body = json.dumps(text)
+    def __init__(self, *, data=None, status=None, reason=None, headers=None):
+        if data and not isinstance(data, str):
+            data = json.dumps(data)
         super().__init__(
-            body=body,
+            text=data,
             status=status,
             reason=reason,
             headers=headers,
-            content_type=content_type or "application/json")
+            content_type="application/json")
 
 
 class HttpResponseNotAllowed(Response):

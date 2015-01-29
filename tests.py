@@ -139,6 +139,15 @@ class UrlResolverTestCase(DvasyaServerTestCaseBase):
         self.assertFunctionViewOK(expected, result)
 
 
+class DvasyaResponseTestCase(DvasyaServerTestCaseBase):
+    def testJSONResponse(self):
+        url = "/json/?status=201"
+        result = self.client.get(url)
+        self.assertEqual(result.status, 201)
+        self.assertEqual(result.content_type, "application/json")
+        self.assertEqual(result.text, '{"ok": true}')
+
+
 class DvasyaRequestParserTestCase(DvasyaServerTestCaseBase):
 
     def testSimpleGet(self):
@@ -298,5 +307,4 @@ class TODOTestCase(DvasyaTestCase):
     def testNoMatchErrorHandling(self):
         self.skipTest("FIXME")
 
-    def testJSONResponse(self):
-        self.skipTest("FIXME")
+
