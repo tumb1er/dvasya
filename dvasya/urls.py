@@ -12,7 +12,7 @@ import asyncio
 import re
 import aiohttp
 from aiohttp.abc import AbstractRouter, AbstractMatchInfo
-from aiohttp.web import Response
+from aiohttp.web import Response, HTTPNotFound
 from dvasya.conf import settings
 from dvasya.utils import import_object
 
@@ -106,9 +106,18 @@ def url(rx, view_or_patterns, name=None):
     return UrlPattern(rx, view_or_patterns, name=name)
 
 
-class NoMatch(Exception):
+class NoMatch(HTTPNotFound):
     """ No match found for request path."""
-    pass
+
+    def __init__(self, *, path=None, patterns=None):
+        if settings.DEBUG:
+            content = ("<h2>No match for path</h2>"
+                      "<h4>{}</h4>"
+                      "<h3>URLConf</h3>".format(path))
+            content += '<br/>'.join(str(p) for p in patterns)
+        else:
+            content = ''
+        super().__init__(text=content, content_type="text/plain")
 
 
 class RegexMatchInfo(AbstractMatchInfo):
@@ -162,7 +171,8 @@ class UrlResolver(AbstractRouter):
             if not match:
                 continue
             return self.match_info_class(*match)
-        raise NoMatch(request_path, [p._regex for p in self.patterns])
+        raise NoMatch(path=request_path,
+                      patterns=[p._regex for p in self.patterns])
 
     @staticmethod
     def compile_patterns(urlpatterns):

@@ -10,6 +10,7 @@ from django.http import StreamingHttpResponse
 from django.http.request import HttpRequest
 
 from dvasya.cookies import parse_cookie
+from dvasya.middleware import RequestProxyMiddleware
 
 
 class DjangoRequestProxy(HttpRequest):
@@ -64,27 +65,17 @@ class DjangoRequestProxy(HttpRequest):
         # FIXME: Remote_addr, remote_port
 
 
-@asyncio.coroutine
-def django_middleware_factory(app, handler):
-    """ aiohttp middleware for transforming request and response
-    between aiohttp and Django.
-    """
+class DjangoRequestProxyMiddleware(RequestProxyMiddleware):
+    request_class = DjangoRequestProxy
 
-    @asyncio.coroutine
-    def middleware(request):
-
-        django_request = DjangoRequestProxy(request)
-
-        response = handler(django_request)
-        if asyncio.iscoroutine(response):
-            response = yield from response
-
-        if isinstance(response, StreamingHttpResponse):
+    def get_response_proxy(self, response):
+        if isinstance(response, self.response_class):
+            return response
+        elif isinstance(response, StreamingHttpResponse):
             response_class = StreamingResponseProxy
         else:
             response_class = ResponseProxy
         return response_class(response)
-    return middleware
 
 
 class ResponseProxy(Response):

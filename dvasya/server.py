@@ -23,6 +23,7 @@ import asyncio
 import aiohttp.server
 from aiohttp import websocket, web
 from dvasya.logging import getLogger
+from dvasya.middleware import RequestProxyMiddleware
 from dvasya.urls import UrlResolver
 
 
@@ -30,7 +31,7 @@ class ChildProcess:
     """ Worker process for http server."""
     logger = getLogger('dvasya.worker')
 
-    middlewares = []
+    middlewares = [RequestProxyMiddleware.factory]
 
     def __init__(self, up_read, down_write, args, sock):
         self.up_read = up_read
@@ -48,8 +49,8 @@ class ChildProcess:
             self.logger.warning(
                 "DJANGO_SETTINGS_MODULE environment variable is set "
                 "but no django is available. Skip installing django handlers.")
-        from dvasya.contrib.django import django_middleware_factory
-        self.middlewares = [django_middleware_factory]
+        from dvasya.contrib.django import DjangoRequestProxyMiddleware
+        self.middlewares = [DjangoRequestProxyMiddleware.factory]
 
     @property
     def protocol_factory(self):

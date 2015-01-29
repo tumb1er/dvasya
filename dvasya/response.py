@@ -8,14 +8,9 @@
 # with a small part of Django HttpResponse interface
 #
 # @see https://docs.djangoproject.com/en/dev/ref/request-response/
-from collections import deque
 import json
 
-from wsgiref.handlers import format_date_time
-from aiohttp.server import RESPONSES
 from aiohttp.web import Response
-import sys
-import dvasya
 from dvasya.conf import settings
 
 

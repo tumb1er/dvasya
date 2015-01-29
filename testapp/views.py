@@ -34,6 +34,20 @@ def json_view(request, *args, **kwargs):
                         data={"ok": True})
 
 
+def cookie_view(request, *args, **kwargs):
+    new_cookies = {}
+    seen_cookies = {}
+    for key, value in request.GET.items():
+        if key.startswith('cookie_'):
+            new_cookies[key[7:]] = value
+    for key, value in request.COOKIES.items():
+        seen_cookies[key] = value
+    response = JSONResponse(status=200, data=seen_cookies)
+    for key, value in new_cookies.items():
+        response.set_cookie(key, value)
+    return response
+
+
 def mvdict_to_listdict(mvdict):
     result = {}
     for k, v in mvdict.items():

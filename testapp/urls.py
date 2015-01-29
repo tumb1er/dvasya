@@ -10,4 +10,5 @@ urlpatterns = patterns('',
     url('^class/', views.ClassBasedView.as_view()),
     url('^function/$', views.function_view),
     url('^json/$', views.json_view),
+    url('^cookies/$', views.cookie_view),
 )

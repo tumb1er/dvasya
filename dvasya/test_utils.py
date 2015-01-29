@@ -8,6 +8,8 @@ from urllib.parse import urlencode
 import asyncio
 
 from aiohttp import protocol, streams, web, parsers, client
+from dvasya.cookies import parse_cookie
+from dvasya.middleware import RequestProxyMiddleware
 
 
 try:
@@ -39,6 +41,7 @@ class ResponseParser:
         self.response = web.Response(reason=message.reason, status=message.code,
                                      headers=headers,
                                      content_type=headers.get('content-type'))
+        self.response._cookies = parse_cookie(headers.get('set-cookie', ''))
 
     def parse_http_content(self, content):
         """ Parses response body, dealing with transfer-encodings."""
@@ -64,7 +67,7 @@ class DvasyaHttpClient:
 
     def __init__(self, *, urlconf=None, middlewares=None):
         self.root_urlconf = urlconf
-        self.middlewares = middlewares
+        self.middlewares = middlewares or [RequestProxyMiddleware.factory]
 
     def create_server(self):
         router = UrlResolver(root_urlconf=self.root_urlconf)

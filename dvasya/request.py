@@ -6,6 +6,7 @@ from tempfile import NamedTemporaryFile
 from urllib.parse import parse_qsl
 import aiohttp
 import asyncio
+from aiohttp.web import Request
 from dvasya.conf import settings
 from dvasya.utils import qsl_to_dict
 
@@ -231,3 +232,19 @@ class MultipartBodyParser:
                 break
             except aiohttp.errors.LineLimitExceededParserError:
                 continue
+
+
+class DvasyaRequestProxy(object):
+
+    def __init__(self, request: Request):
+        self.__request = request
+
+    def __getattr__(self, item):
+        try:
+            return getattr(self.__request, item)
+        except AttributeError:
+            return super().__getattribute__(item)
+
+    @property
+    def COOKIES(self):
+        return self.__request.cookies

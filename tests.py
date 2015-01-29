@@ -112,8 +112,8 @@ class UrlResolverTestCase(DvasyaServerTestCaseBase):
 
     def testReverseWithEOLRegex(self):
         url = "/function/other/"
-        with self.assertRaises(NoMatch):
-            self.client.get(url)
+        result = self.client.get(url)
+        self.assertEqual(result.status, 404)
 
     def testSimpleIncluded(self):
         url = "/include/test_include/"
@@ -138,6 +138,15 @@ class UrlResolverTestCase(DvasyaServerTestCaseBase):
         expected['args'] = ['123', 'val']
         self.assertFunctionViewOK(expected, result)
 
+    def testNoMatchErrorHandling(self):
+        url = "/nomatch/"
+        result = self.client.get(url)
+        self.assertEqual(result.status, 404)
+        # check debug output for NoMatch error
+        self.assertIn("nomatch", result.text)
+        self.assertIn("include", result.text)
+
+
 
 class DvasyaResponseTestCase(DvasyaServerTestCaseBase):
     def testJSONResponse(self):
@@ -146,6 +155,15 @@ class DvasyaResponseTestCase(DvasyaServerTestCaseBase):
         self.assertEqual(result.status, 201)
         self.assertEqual(result.content_type, "application/json")
         self.assertEqual(result.text, '{"ok": true}')
+
+    def testCookieSupport(self):
+        url = "/cookies/?cookie_key=value"
+        result = self.client.get(url, headers={"Cookie": "some_key=some_value"})
+        data = json.loads(result.text)
+        self.assertDictEqual({"some_key": "some_value"}, data)
+        cookies = result.cookies
+        self.assertDictEqual({"key": "value"}, cookies)
+
 
 
 class DvasyaRequestParserTestCase(DvasyaServerTestCaseBase):
@@ -266,8 +284,6 @@ class DvasyaRequestParserTestCase(DvasyaServerTestCaseBase):
         self.assertFunctionViewOK(expected, result)
 
 
-
-
 class DjangoTestCase(DvasyaTestCase):
     root_urlconf = 'testapp.django_compat.urls'
 
@@ -275,8 +291,8 @@ class DjangoTestCase(DvasyaTestCase):
     def setUpClass(cls):
         super().setUpClass()
         os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'testapp.settings')
-        from dvasya.contrib.django import django_middleware_factory
-        cls.middlewares = [django_middleware_factory]
+        from dvasya.contrib.django import DjangoRequestProxyMiddleware
+        cls.middlewares = [DjangoRequestProxyMiddleware.factory]
 
     def testRequestEncoding(self):
         url = '/rest/'
@@ -298,13 +314,8 @@ class DjangoTestCase(DvasyaTestCase):
 
 class TODOTestCase(DvasyaTestCase):
 
-    def testCookieSupport(self):
-        self.skipTest("FIXME")
-
     def test500ErrorHandling(self):
         self.skipTest("FIXME")
 
-    def testNoMatchErrorHandling(self):
-        self.skipTest("FIXME")
 
 
