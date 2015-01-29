@@ -4,13 +4,17 @@
 
 DEBUG = True
 
-ROOT_URLCONF='testapp.urls'
+ROOT_URLCONF = 'testapp.urls'
 
-SECRET_KEY = 'ASDSAD'
+# All above is needed for Django setup.
 
-INSTALLED_APPS=[
+SECRET_KEY = 'secret_key_for_django'
+
+INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework'
 ]
 
-STATIC_URL='/static/'
+STATIC_URL = '/static/'
+
+DEFAULT_CHARSET = 'utf-8'
