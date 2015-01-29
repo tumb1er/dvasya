@@ -2,8 +2,10 @@
 
 # $Id: $
 import asyncio
-from aiohttp.web import Response
+from aiohttp.web import Response, HTTPInternalServerError
+from dvasya.conf import settings
 from dvasya.request import DvasyaRequestProxy
+from dvasya.response import HttpInternalError
 
 
 class RequestProxyMiddleware(object):
@@ -21,9 +23,15 @@ class RequestProxyMiddleware(object):
 
     def __call__(self, request):
         proxy = self.get_request_proxy(request)
-        result = self.handler(proxy)
-        if asyncio.iscoroutine(result):
-            result = yield from result
+        try:
+            result = self.handler(proxy)
+            if asyncio.iscoroutine(result):
+                result = yield from result
+        except Exception as e:
+            if settings.DEBUG:
+                return HttpInternalError(e)
+            raise
+
         return self.get_response_proxy(result)
 
     def get_request_proxy(self, request):
@@ -35,3 +43,8 @@ class RequestProxyMiddleware(object):
         else:
             # noinspection PyArgumentList
             return self.response_class(result)
+
+    def format_traceback(self, exc):
+        import traceback
+        trace = traceback.format_exc()
+        return "<h2>"

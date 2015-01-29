@@ -14,7 +14,6 @@ from aiohttp.web import Response
 os.environ.setdefault("DVASYA_SETTINGS_MODULE", 'testapp.settings')
 
 from dvasya.test_utils import DvasyaTestCase
-from dvasya.urls import NoMatch
 
 from testapp import views
 
@@ -315,7 +314,16 @@ class DjangoTestCase(DvasyaTestCase):
 class TODOTestCase(DvasyaTestCase):
 
     def test500ErrorHandling(self):
-        self.skipTest("FIXME")
+        url = '/function/'
+        with mock.patch("testapp.views.function_view",
+                        side_effect=ValueError("WTF")):
+            result = self.client.get(url)
+        self.assertEqual(result.status, 500)
+        # check debug formatting
+        self.assertIn("ValueError", result.text)
+        self.assertIn("WTF", result.text)
+        # check traceback to mock is present
+        self.assertIn("raise effect", result.text)
 
 
 
