@@ -15,8 +15,6 @@
 import os
 import signal
 import socket
-import email.message
-from urllib import parse
 import time
 import sys
 import atexit
@@ -32,15 +30,31 @@ class ChildProcess:
     """ Worker process for http server."""
     logger = getLogger('dvasya.worker')
 
+    middlewares = []
+
     def __init__(self, up_read, down_write, args, sock):
         self.up_read = up_read
         self.down_write = down_write
         self.args = args
         self.sock = sock
+        if os.environ.get('DJANGO_SETTINGS_MODULE'):
+            self.install_django_handlers()
+
+    def install_django_handlers(self):
+        try:
+            import django
+            django.setup()
+        except ImportError:
+            self.logger.warning(
+                "DJANGO_SETTINGS_MODULE environment variable is set "
+                "but no django is available. Skip installing django handlers.")
+        from dvasya.contrib.django import django_middleware_factory
+        self.middlewares = [django_middleware_factory]
 
     @property
     def protocol_factory(self):
-        app = web.Application(router=UrlResolver(), loop=self.loop)
+        app = web.Application(router=UrlResolver(), loop=self.loop,
+                              middlewares=self.middlewares)
         return app.make_handler()
 
     def before_loop(self):
