@@ -138,8 +138,8 @@ class UrlResolver(AbstractRouter):
             cls.resolver = UrlResolver()
         return cls.resolver
 
-    def __init__(self,):
-        urlconf_module = settings.ROOT_URLCONF
+    def __init__(self, root_urlconf=None):
+        urlconf_module = root_urlconf or settings.ROOT_URLCONF
         urlconf = __import__(urlconf_module, fromlist='urlpatterns')
         self.patterns = self.compile_patterns(urlconf.urlpatterns)
 
