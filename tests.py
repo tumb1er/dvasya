@@ -9,10 +9,10 @@ from unittest import mock
 from urllib import parse
 
 from aiohttp.protocol import HttpMessage
+from aiohttp.web import Response
 
 os.environ.setdefault("DVASYA_SETTINGS_MODULE", 'testapp.settings')
 
-from dvasya.response import HttpResponse
 from dvasya.test_utils import DvasyaTestCase
 from dvasya.urls import NoMatch
 
@@ -63,20 +63,39 @@ class DvasyaServerTestCaseBase(DvasyaTestCase):
     def assertFunctionViewOK(self, expected, result):
         self.assertTrue(self.mock.called)
         self.assertEqual(result.status_code, 200)
-        self.assertEqual(result.content_type, "application/json; charset=utf-8")
+        self.assertEqual(result.content_type, "application/json")
         content = json.loads(result.content)
         for key in ('request', 'kwargs'):
             self.assertDictEqual(content[key], expected[key])
         self.assertListEqual(content['args'], expected['args'])
 
     def assertNoMatch(self, result):
-        self.assertIsInstance(result, HttpResponse)
+        self.assertIsInstance(result, Response)
         self.assertEqual(result.status_code, 404)
         self.assertIn("No match for path", result.content)
         self.assertEqual(result.content_type, "text/html")
 
 
+class DvasyaGenericViewsTestCase(DvasyaServerTestCaseBase):
+
+    def testClassBasedView(self):
+        url = "/class/not_used/"
+        result = self.client.get(url)
+        expected = self.expected
+        self.assertFunctionViewOK(expected, result)
+
+    def test405NotAllowed(self):
+        url = "/class/not_used/"
+        response = self.client.patch(url)
+        self.assertEqual(response.status_code, 405)
+        allow = response.headers.get('ALLOW', '')
+        methods = sorted(allow.split(', '))
+        expected = ['GET', 'POST', 'PUT', 'DELETE', 'HEAD', 'OPTIONS']
+        self.assertListEqual(methods, sorted(expected))
+
+
 class UrlResolverTestCase(DvasyaServerTestCaseBase):
+
     def testFunctionView(self):
         url = "/function/"
         result = self.client.get(url)
@@ -118,14 +137,9 @@ class UrlResolverTestCase(DvasyaServerTestCaseBase):
         expected['args'] = ['123', 'val']
         self.assertFunctionViewOK(expected, result)
 
-    def testClassBasedView(self):
-        url = "/class/not_used/"
-        result = self.client.get(url)
-        expected = self.expected
-        self.assertFunctionViewOK(expected, result)
-
 
 class DvasyaRequestParserTestCase(DvasyaServerTestCaseBase):
+
     def testSimpleGet(self):
         url = '/class/?arg1=val1&arg2=val2?&arg2=val3#hashtag'
         expected = self.expected
@@ -242,6 +256,36 @@ class DvasyaRequestParserTestCase(DvasyaServerTestCaseBase):
         self.assertFunctionViewOK(expected, result)
 
 
+
+
+class DjangoTestCase(DvasyaTestCase):
+    root_urlconf = 'testapp.django_compat.urls'
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'testapp.settings')
+        from dvasya.contrib.django import django_middleware_factory
+        cls.middlewares = [django_middleware_factory]
+
+    def testRequestEncoding(self):
+        url = '/rest/'
+        headers = {
+            'Content-Type': 'text/plain; charset=cp1251'
+        }
+        data = {"ok": True}
+        from rest_framework.response import Response
+        with mock.patch('testapp.django_compat.views.SampleView.get',
+                        return_value=Response(data)) as p:
+            response = self.client.get(url, headers=headers)
+            self.assertEqual(response.content, json.dumps(data).replace(' ', ''))
+        request = p.call_args[0][0]
+        self.assertEqual(request.encoding, "cp1251")
+
+    def testDjangoRestFrameworkPost(self):
+        self.skipTest("FIXME")
+
+
 class TODOTestCase(DvasyaTestCase):
 
     def testCookieSupport(self):
@@ -250,11 +294,8 @@ class TODOTestCase(DvasyaTestCase):
     def test500ErrorHandling(self):
         self.skipTest("FIXME")
 
-    def test405NotAllowed(self):
+    def testNoMatchErrorHandling(self):
         self.skipTest("FIXME")
 
     def testJSONResponse(self):
-        self.skipTest("FIXME")
-
-    def testDjangoCompat(self):
         self.skipTest("FIXME")
