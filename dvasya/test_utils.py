@@ -39,11 +39,10 @@ class ResponseParser:
         self.response = web.Response(reason=message.reason, status=message.code,
                                      headers=headers,
                                      content_type=headers.get('content-type'))
-        self.response.status_code = message.code
 
     def parse_http_content(self, content):
         """ Parses response body, dealing with transfer-encodings."""
-        self.response.content = content.decode('utf-8')
+        self.response.text = content.decode('utf-8')
 
     def feed_eof(self):
         pass

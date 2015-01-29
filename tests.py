@@ -62,17 +62,18 @@ class DvasyaServerTestCaseBase(DvasyaTestCase):
 
     def assertFunctionViewOK(self, expected, result):
         self.assertTrue(self.mock.called)
-        self.assertEqual(result.status_code, 200)
+        self.assertIsInstance(result, Response)
+        self.assertEqual(result.status, 200)
         self.assertEqual(result.content_type, "application/json")
-        content = json.loads(result.content)
+        content = json.loads(result.text)
         for key in ('request', 'kwargs'):
             self.assertDictEqual(content[key], expected[key])
         self.assertListEqual(content['args'], expected['args'])
 
     def assertNoMatch(self, result):
         self.assertIsInstance(result, Response)
-        self.assertEqual(result.status_code, 404)
-        self.assertIn("No match for path", result.content)
+        self.assertEqual(result.status, 404)
+        self.assertIn("No match for path", result.text)
         self.assertEqual(result.content_type, "text/html")
 
 
@@ -87,7 +88,7 @@ class DvasyaGenericViewsTestCase(DvasyaServerTestCaseBase):
     def test405NotAllowed(self):
         url = "/class/not_used/"
         response = self.client.patch(url)
-        self.assertEqual(response.status_code, 405)
+        self.assertEqual(response.status, 405)
         allow = response.headers.get('ALLOW', '')
         methods = sorted(allow.split(', '))
         expected = ['GET', 'POST', 'PUT', 'DELETE', 'HEAD', 'OPTIONS']
@@ -278,7 +279,7 @@ class DjangoTestCase(DvasyaTestCase):
         with mock.patch('testapp.django_compat.views.SampleView.get',
                         return_value=Response(data)) as p:
             response = self.client.get(url, headers=headers)
-            self.assertEqual(response.content, json.dumps(data).replace(' ', ''))
+            self.assertEqual(response.text, json.dumps(data).replace(' ', ''))
         request = p.call_args[0][0]
         self.assertEqual(request.encoding, "cp1251")
 
