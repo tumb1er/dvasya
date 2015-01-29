@@ -296,6 +296,15 @@ class DvasyaRequestParserTestCase(DvasyaServerTestCaseBase):
     def testMultipartFieldEncoding(self):
         self.skipTest("fixme")
 
+    def testNotFinishedMultipart(self):
+        self.skipTest("fixme")
+
+    def testNotFinishedUrlEncoded(self):
+        self.skipTest("fixme")
+
+    def testNotFinishedOctetStream(self):
+        self.skipTest("fixme")
+
 
 class DjangoTestCase(DvasyaTestCase):
     root_urlconf = 'testapp.django_compat.urls'
