@@ -78,17 +78,15 @@ def dump_params(request, *args, **kwargs):
     for k, v in request.POST.items():
         if isinstance(v, str):
             post[k] = v
+        elif isinstance(v, bytes):
+            post[k] = v.decode("utf-8")
         else:
-            files[k] = v.file.read().decode("utf-8")
-
-    remote_addr, remote_port = request.transport.get_extra_info("peername")
-    meta = {
-        'REMOTE_ADDR': remote_addr,
-        "REMOTE_PORT": remote_port
-    }
-    meta.update({k.replace('-', '_'): v for k, v in request.headers.items()})
-
-
+            raise ValueError(v)
+    for k, v in request.FILES.items():
+        files[k] = v.file.read().decode("utf-8")
+    meta = {}
+    for k, v in request.META.items():
+        meta[k] = v
 
     result = {
         'request': {

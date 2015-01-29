@@ -6,7 +6,8 @@ from tempfile import NamedTemporaryFile
 from urllib.parse import parse_qsl
 import aiohttp
 import asyncio
-from aiohttp.web import Request
+from aiohttp._multidict import MultiDict, MultiDictProxy
+from aiohttp.web import Request, FileField
 from dvasya.conf import settings
 from dvasya.utils import qsl_to_dict
 
@@ -93,7 +94,7 @@ class FormUrlEncodedBodyMemoryParser:
     def parse_payload(self, request):
         request.body = bytearray()
         chunks = 0
-        while True:
+        while not self.payload.at_eof():
             try:
                 buffer = yield from self.payload.read()
             except aiohttp.parsers.EofStream:
@@ -151,7 +152,8 @@ def header_unquote(val, filename=False):
 def parse_options_header(header, options=None):
     header = header.decode('utf-8')
     if ';' not in header:
-        return header.lower().strip(), {}
+        header, value = header.strip().split(": ", 1)
+        return header.lower(), value
     ctype, tail = header.split(';', 1)
     options = options or {}
     for match in _re_option.finditer(tail):
@@ -176,7 +178,7 @@ class MultipartBodyParser:
 
     def parse_payload(self, request):
         request.body = None
-        while True:
+        while not self.payload.at_eof():
             try:
                 buffer = yield from self.payload.read()
                 try:
@@ -198,14 +200,19 @@ class MultipartBodyParser:
         if header.lower().startswith('content-disposition'):
             self.field_name = options.get('name')
             self.filename = options.get('filename')
+        elif header.lower() == 'content-type':
+            self.content_type = header
 
     def process_field_data(self, data):
         if not self.filename:
             self.__data.setdefault(self.field_name, b'')
             self.__data[self.field_name] += data
         else:
-            self.__files.setdefault(self.field_name, NamedTemporaryFile(dir=self.temp_dir))
-            self.__files[self.field_name].write(data)
+            file = NamedTemporaryFile(dir=self.temp_dir)
+            field = FileField(name=self.field_name, filename=self.filename,
+                              content_type=self.content_type, file=file)
+            self.__files.setdefault(self.field_name, field)
+            self.__files[self.field_name].file.write(data)
 
     def __call__(self, out, input):
         yield from input.readuntil(self.boundary, limit=self.boundary_len)
@@ -238,6 +245,9 @@ class DvasyaRequestProxy(object):
 
     def __init__(self, request: Request):
         self.__request = request
+        self.POST = {}
+        self.FILES = {}
+        self._meta = None
 
     def __getattr__(self, item):
         try:
@@ -246,5 +256,61 @@ class DvasyaRequestProxy(object):
             return super().__getattribute__(item)
 
     @property
+    def META(self):
+        if self._meta:
+            return self._meta
+        transport = self.__request.transport
+        remote_addr, remote_port = transport.get_extra_info("peername")
+        self._meta = {
+            'REMOTE_ADDR': remote_addr,
+            "REMOTE_PORT": remote_port
+        }
+        for k, v in self.__request.headers.items():
+            if '_' in k:
+                continue
+            key = k.upper().replace('-', '_')
+            self._meta[key] = v
+        return self._meta
+
+    @property
     def COOKIES(self):
         return self.__request.cookies
+
+    @asyncio.coroutine
+    def post(self):
+        request = self.__request
+        if request._post is not None:
+            return request._post
+        if request.method not in ('POST', 'PUT', 'PATCH'):
+            request._post = MultiDictProxy(MultiDict())
+            return request._post
+
+        content_type = request.content_type
+        if (content_type not in ('',
+                                 'application/x-www-form-urlencoded',
+                                 'multipart/form-data')):
+            request._post = MultiDictProxy(MultiDict())
+            return request._post
+        content_type = request.headers.get('CONTENT-TYPE', '')
+        parser = self.create_parser(content_type, request.content)
+        self.POST, self.FILES = yield from parser.parse_payload(request)
+        out = MultiDict()
+        for name, field in self.POST.items():
+            out.add(name, field)
+        for name, field in self.FILES.items():
+            field.file.seek(0)
+            out.add(name, field)
+
+        self.__request._post = MultiDictProxy(out)
+        return self.__request._post
+
+
+    def create_parser(self, content_type, payload):
+        if content_type.startswith('multipart/form-data'):
+            _, boundary_field = content_type.split('; ')
+            boundary = boundary_field.split('=')[1]
+            return MultipartBodyParser(payload, boundary)
+        elif content_type.startswith('application/x-www-form-urlencoded'):
+            return FormUrlEncodedBodyMemoryParser(payload)
+        else:
+            return RawBodyFileParser(payload)
