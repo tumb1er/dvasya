@@ -293,6 +293,9 @@ class DvasyaRequestParserTestCase(DvasyaServerTestCaseBase):
         result = self.client.post(url, body=body, headers=headers)
         self.assertFunctionViewOK(expected, result)
 
+    def testMultipartFieldEncoding(self):
+        self.skipTest("fixme")
+
 
 class DjangoTestCase(DvasyaTestCase):
     root_urlconf = 'testapp.django_compat.urls'
