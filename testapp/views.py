@@ -31,7 +31,7 @@ def function_view(*args, **kwargs):
 
 def mvdict_to_listdict(mvdict):
     result = {}
-    for k, v in mvdict._items:
+    for k, v in mvdict.items():
         if k in result:
             value = result[k]
             if not isinstance(value, list):
@@ -101,7 +101,6 @@ class ClassBasedView(View):
     head = any_method
     delete = any_method
     post = any_method
-    patch = any_method
     put = any_method
 
 class TestView(View):
