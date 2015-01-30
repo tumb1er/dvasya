@@ -96,27 +96,27 @@ def parse_options_header(header, options=None):
 
 class MultipartBodyParser:
     header_len = 300
-    data_buffer_size = 50000000
+    data_buffer_size = 10000000
     temp_dir = settings.FILE_UPLOAD_TEMP_DIR
 
     def __init__(self, payload, boundary):
         self.payload = payload
         self.boundary = bytes('--' + boundary, encoding='utf-8')
         self.boundary_len = len(self.boundary)
-        self.buffer = aiohttp.parsers.StreamParser()
+        self.buffer = aiohttp.parsers.StreamParser(paused=False)
         self.__data = {}
         self.__files = {}
 
     @asyncio.coroutine
     def parse_payload(self, request):
         request.body = None
+        if not self.buffer._parser:
+            self.buffer.set_parser(self)
         while not self.payload.at_eof():
             try:
-                buffer = yield from self.payload.read()
+                buffer = yield from self.payload.read(self.data_buffer_size)
                 try:
                     self.buffer.feed_data(buffer)
-                    if not self.buffer._parser:
-                        self.buffer.set_parser(self)
                 except ValueError as e:
                     print(e)
                     pass
