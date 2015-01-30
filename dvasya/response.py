@@ -18,7 +18,7 @@ from dvasya.conf import settings
 class JSONResponse(Response):
     """ Special HTTPResponse class that dumps data to json format."""
 
-    def __init__(self, *, data=None, status=None, reason=None, headers=None):
+    def __init__(self, *, data=None, status=200, reason=None, headers=None):
         if data and not isinstance(data, str):
             data = json.dumps(data)
         super().__init__(
