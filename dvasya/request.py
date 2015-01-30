@@ -96,7 +96,7 @@ def parse_options_header(header, options=None):
 
 class MultipartBodyParser:
     header_len = 300
-    data_buffer_size = 100000
+    data_buffer_size = 50000000
     temp_dir = settings.FILE_UPLOAD_TEMP_DIR
 
     def __init__(self, payload, boundary):
@@ -140,10 +140,12 @@ class MultipartBodyParser:
             self.__data.setdefault(self.field_name, b'')
             self.__data[self.field_name] += data
         else:
-            file = NamedTemporaryFile(dir=self.temp_dir)
-            field = FileField(name=self.field_name, filename=self.filename,
-                              content_type=self.content_type, file=file)
-            self.__files.setdefault(self.field_name, field)
+            field = self.__files.get(self.field_name)
+            if not field:
+                file = NamedTemporaryFile(dir=self.temp_dir)
+                field = FileField(name=self.field_name, filename=self.filename,
+                                  content_type=self.content_type, file=file)
+                self.__files[self.field_name] = field
             field.file.write(data)
 
     def __call__(self, out, input):
@@ -159,12 +161,14 @@ class MultipartBodyParser:
                 self.parse_header_line(header_line)
             while True:
                 try:
-                    data = yield from input.readuntil(
+                    data = yield from input.waituntil(
                         self.boundary,
                         limit=self.boundary_len + self.data_buffer_size)
-                except ValueError:
+                    yield from input.skip(len(data))
+                except aiohttp.errors.LineLimitExceededParserError:
                     data = yield from input.read(self.data_buffer_size)
                     self.process_field_data(data)
+                    continue
                 if data[-self.boundary_len - 2:] == b'\r\n' + self.boundary:
                     data = data[:-self.boundary_len - 2]
                     self.process_field_data(data)
