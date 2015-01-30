@@ -3,6 +3,8 @@ from distutils.core import setup
 from shutil import copy
 from dvasya import VERSION
 
+SCRIPTS = "manage", "gunicorn"
+
 install_requires=['aiohttp>=0.14.3,<0.15']
 
 
@@ -15,7 +17,8 @@ elif PY_VER >= (3, 3):
 else:
     raise RuntimeError("dvasya doesn't suppport Python earllier than 3.3")
 try:
-    copy("scripts/manage.py", "scripts/dvasya-manage")
+    for script in SCRIPTS:
+        copy("scripts/%s.py" % script, "scripts/dvasya-%s" % script)
 except (OSError, IOError):
     pass
 
@@ -24,7 +27,7 @@ setup(
     name='dvasya',
     version=VERSION,
     packages=['dvasya', 'dvasya.contrib'],
-    scripts=['scripts/dvasya-manage'],
+    scripts=["scripts/dvasya-%s" % s for s in SCRIPTS],
     url='',
     license='Beer Licence',
     author='tumbler',

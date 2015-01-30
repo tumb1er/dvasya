@@ -17,13 +17,14 @@ from aiohttp import web
 from gunicorn.workers import gaiohttp
 
 from dvasya.logging import getLogger
+from dvasya.middleware import RequestProxyMiddleware
 from dvasya.urls import UrlResolver
 
 
 class GunicornWorker(gaiohttp.AiohttpWorker):
 
     logger = getLogger('dvasya.worker')
-    middlewares = []
+    middlewares = [RequestProxyMiddleware.factory]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -38,8 +39,8 @@ class GunicornWorker(gaiohttp.AiohttpWorker):
             self.logger.warning(
                 "DJANGO_SETTINGS_MODULE environment variable is set "
                 "but no django is available. Skip installing django handlers.")
-        from dvasya.contrib.django import django_middleware_factory
-        self.middlewares = [django_middleware_factory]
+        from dvasya.contrib.django import DjangoRequestProxyMiddleware
+        self.middlewares = [DjangoRequestProxyMiddleware.factory]
 
     def web_factory(self, handler):
         proto = handler()
