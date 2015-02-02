@@ -9,11 +9,10 @@ from unittest import mock
 from urllib import parse
 
 from aiohttp.protocol import HttpMessage
-
+from aiohttp.web import Response
 
 os.environ.setdefault("DVASYA_SETTINGS_MODULE", 'testapp.settings')
 
-from dvasya.response import HttpResponse
 from dvasya.test_utils import DvasyaTestCase
 
 from testapp import views
@@ -38,7 +37,7 @@ class DvasyaServerTestCaseBase(DvasyaTestCase):
                      "ACCEPT_ENCODING": "gzip, deflate",
                      "REMOTE_PORT": "12345",
                      "REMOTE_ADDR": "127.0.0.1"
-                 }
+                 },
                 },
             "args": [],
             "kwargs": {}
@@ -46,6 +45,8 @@ class DvasyaServerTestCaseBase(DvasyaTestCase):
 
     def setUp(self):
         super().setUp()
+        self.maxDiff = 20000
+
         self.view_patcher = mock.patch('testapp.views.dump_params',
                                        side_effect=views.dump_params)
         self.mock = self.view_patcher.start()
@@ -60,21 +61,41 @@ class DvasyaServerTestCaseBase(DvasyaTestCase):
 
     def assertFunctionViewOK(self, expected, result):
         self.assertTrue(self.mock.called)
-        self.assertEqual(result.status_code, 200)
+        self.assertIsInstance(result, Response)
+        self.assertEqual(result.status, 200)
         self.assertEqual(result.content_type, "application/json")
-        content = json.loads(result.content)
+        content = json.loads(result.text)
         for key in ('request', 'kwargs'):
             self.assertDictEqual(content[key], expected[key])
         self.assertListEqual(content['args'], expected['args'])
 
     def assertNoMatch(self, result):
-        self.assertIsInstance(result, HttpResponse)
-        self.assertEqual(result.status_code, 404)
-        self.assertIn("No match for path", result.content)
+        self.assertIsInstance(result, Response)
+        self.assertEqual(result.status, 404)
+        self.assertIn("No match for path", result.text)
         self.assertEqual(result.content_type, "text/html")
 
 
+class DvasyaGenericViewsTestCase(DvasyaServerTestCaseBase):
+
+    def testClassBasedView(self):
+        url = "/class/not_used/"
+        result = self.client.get(url)
+        expected = self.expected
+        self.assertFunctionViewOK(expected, result)
+
+    def test405NotAllowed(self):
+        url = "/class/not_used/"
+        response = self.client.patch(url)
+        self.assertEqual(response.status, 405)
+        allow = response.headers.get('ALLOW', '')
+        methods = sorted(allow.split(', '))
+        expected = ['GET', 'POST', 'PUT', 'DELETE', 'HEAD', 'OPTIONS']
+        self.assertListEqual(methods, sorted(expected))
+
+
 class UrlResolverTestCase(DvasyaServerTestCaseBase):
+
     def testFunctionView(self):
         url = "/function/"
         result = self.client.get(url)
@@ -91,7 +112,7 @@ class UrlResolverTestCase(DvasyaServerTestCaseBase):
     def testReverseWithEOLRegex(self):
         url = "/function/other/"
         result = self.client.get(url)
-        self.assertNoMatch(result)
+        self.assertEqual(result.status, 404)
 
     def testSimpleIncluded(self):
         url = "/include/test_include/"
@@ -116,14 +137,47 @@ class UrlResolverTestCase(DvasyaServerTestCaseBase):
         expected['args'] = ['123', 'val']
         self.assertFunctionViewOK(expected, result)
 
-    def testClassBasedView(self):
-        url = "/class/not_used/"
+    def testNoMatchErrorHandling(self):
+        url = "/nomatch/"
         result = self.client.get(url)
-        expected = self.expected
-        self.assertFunctionViewOK(expected, result)
+        self.assertEqual(result.status, 404)
+        # check debug output for NoMatch error
+        self.assertIn("nomatch", result.text)
+        self.assertIn("include", result.text)
+
+
+class DvasyaResponseTestCase(DvasyaServerTestCaseBase):
+
+    def testJSONResponse(self):
+        url = "/json/?status=201"
+        result = self.client.get(url)
+        self.assertEqual(result.status, 201)
+        self.assertEqual(result.content_type, "application/json")
+        self.assertEqual(result.text, '{"ok": true}')
+
+    def testCookieSupport(self):
+        url = "/cookies/?cookie_key=value"
+        result = self.client.get(url, headers={"Cookie": "some_key=some_value"})
+        data = json.loads(result.text)
+        self.assertDictEqual({"some_key": "some_value"}, data)
+        cookies = result.cookies
+        self.assertDictEqual({"key": "value"}, cookies)
+
+    def test500ErrorHandling(self):
+        url = '/function/'
+        with mock.patch("testapp.views.patched_function_view",
+                        side_effect=ValueError("WTF")):
+            result = self.client.get(url)
+        self.assertEqual(result.status, 500)
+        # check debug formatting
+        self.assertIn("ValueError", result.text)
+        self.assertIn("WTF", result.text)
+        # check traceback to mock is present
+        self.assertIn("raise effect", result.text)
 
 
 class DvasyaRequestParserTestCase(DvasyaServerTestCaseBase):
+
     def testSimpleGet(self):
         url = '/class/?arg1=val1&arg2=val2?&arg2=val3#hashtag'
         expected = self.expected
@@ -149,7 +203,7 @@ class DvasyaRequestParserTestCase(DvasyaServerTestCaseBase):
         expected = self.expected
         expected['request'].update({
             'GET': {'arg1': 'val1'},
-            'DATA': body,
+            'DATA': None,
             'POST': {
                 'arg1': 'val1',
                 'arg2': 'val2',
@@ -239,17 +293,45 @@ class DvasyaRequestParserTestCase(DvasyaServerTestCaseBase):
         result = self.client.post(url, body=body, headers=headers)
         self.assertFunctionViewOK(expected, result)
 
+    def testMultipartFieldEncoding(self):
+        self.skipTest("fixme")
 
-class TODOTestCase(DvasyaTestCase):
+    def testNotFinishedMultipart(self):
+        self.skipTest("fixme")
 
-    def testCookieSupport(self):
+    def testNotFinishedUrlEncoded(self):
+        self.skipTest("fixme")
+
+    def testNotFinishedOctetStream(self):
+        self.skipTest("fixme")
+
+
+class DjangoTestCase(DvasyaTestCase):
+    root_urlconf = 'testapp.django_compat.urls'
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'testapp.settings')
+        from dvasya.contrib.django import DjangoRequestProxyMiddleware
+        cls.middlewares = [DjangoRequestProxyMiddleware.factory]
+
+    def testRequestEncoding(self):
+        url = '/rest/'
+        headers = {
+            'Content-Type': 'text/plain; charset=cp1251'
+        }
+        data = {"ok": True}
+        from rest_framework.response import Response
+        with mock.patch('testapp.django_compat.views.SampleView.get',
+                        return_value=Response(data)) as p:
+            response = self.client.get(url, headers=headers)
+            self.assertEqual(response.text, json.dumps(data).replace(' ', ''))
+        request = p.call_args[0][0]
+        self.assertEqual(request.encoding, "cp1251")
+
+    def testDjangoRestFrameworkPost(self):
         self.skipTest("FIXME")
 
-    def test500ErrorHandling(self):
-        self.skipTest("FIXME")
 
-    def test405NotAllowed(self):
-        self.skipTest("FIXME")
 
-    def testJSONResponse(self):
-        self.skipTest("FIXME")

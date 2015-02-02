@@ -15,192 +15,48 @@
 import os
 import signal
 import socket
-import email.message
-from urllib import parse
 import time
 import sys
 import atexit
 import asyncio
 
 import aiohttp.server
-from aiohttp import websocket
-from aiohttp.log import access_log, server_log
-from aiohttp.server import ACCESS_LOG_FORMAT
-from dvasya.cookies import parse_cookie
+from aiohttp import websocket, web
 from dvasya.logging import getLogger
-from dvasya.request import DvasyaRequest
-from dvasya.response import HttpResponseNotFound
-from dvasya.urls import UrlResolver, NoMatch
-from dvasya.utils import qsl_to_dict
-
-
-class HttpServer(aiohttp.server.ServerHttpProtocol):
-    """ Asynchronous HTTP Server."""
-
-    resolver = UrlResolver.autodiscover()
-    logger = getLogger('dvasya.request')
-
-    def __init__(self, *, loop=None, keep_alive=None,
-                 timeout=15, tcp_keepalive=True, allowed_methods=(),
-                 debug=False, log=server_log, access_log=access_log,
-                 access_log_format=ACCESS_LOG_FORMAT, **kwargs):
-        super().__init__(loop=loop, keep_alive=keep_alive,
-                         timeout=timeout, tcp_keepalive=tcp_keepalive,
-                         allowed_methods=allowed_methods, debug=debug,
-                         log=log, access_log=access_log,
-                         access_log_format=access_log_format, **kwargs)
-
-
-    @asyncio.coroutine
-    def get_response(self, request):
-        """ Resolves view class by request path and calls request handler.
-
-        If no handler is found by resolver, returns 404 page.
-        """
-        try:
-            result = yield from self.resolver.dispatch(request, self.transport)
-            return result
-        except NoMatch as e:
-            return HttpResponseNotFound(e)
-
-    def log_exception(self, *args, **kwargs):
-        """ Отключаем метод записи ошибки в лог из aiohttp
-        т.к. он не передает всех необходимых параметров"""
-        pass
-
-    def handle_error(self, status=500, message=None, payload=None, exc=None,
-                     headers=None):
-        if status == 500:
-            extra_data = {}
-            try:
-                extra_data['method'] = payload.method
-                extra_data['path'] = payload.path
-                extra_data['headers'] = dict(
-                    self.get_http_headers(payload).items())
-            except:
-                pass
-            self.logger.exception("Uncaught error", extra=extra_data)
-        return super().handle_error(status, message, payload, exc, headers)
-
-
-    def get_http_headers(self, message):
-        """ Transforms headers from aiohttp.message to more usable form.
-
-        @param message: http request object
-        @type message: aiohttp.RawRequestMessage
-
-        @return: http readers container
-        @rtype: email.message.Message
-        """
-        headers = email.message.Message()
-        for hdr, val in message.headers.items():
-            headers.add_header(hdr, val)
-        return headers
-
-    def construct_request(self, message, payload):
-        request = DvasyaRequest(self.reader, message.method,
-                                message.path, message.version)
-        request.headers = self.get_http_headers(message)
-        request.META = self.get_meta(request, self.transport)
-        request.GET = self.get_get_params(request)
-        request.COOKIES = self.get_cookies(request)
-        request.payload = payload
-        return request
-
-    def process_response(self, request, response):
-        # force response not to keep-alive connection (for ab test, mostly)
-        response.force_close()
-        # attaches transport for aiohttp.HttpMessage and sends headers
-        response.attach_transport(self.writer, request)
-        # if response has content, sends it to client
-        if response.content:
-            # FIXME: other encodings?
-            if isinstance(response.content, str):
-                response.write(bytearray(response.content, "utf-8"))
-            else:
-                response.write(response.content)
-        # finishes response
-        response.write_eof()
-        request.close()
-
-    @asyncio.coroutine
-    def handle_request(self, message, payload):
-        """ Handles HTTP request.
-
-        Constructs request from http message,
-        computes response and writes content of HttpResponse to client.
-
-        @param message: http request object
-        @type message: aiohttp.RawRequestMessage
-
-        @param payload: http request stream handler
-        @type payload: aiohttp.parsers.DataQueue
-
-        @rtype : None
-        """
-        request = self.construct_request(message, payload)
-
-        # dispatching and computing response
-        response = yield from self.get_response(request)
-
-        self.process_response(request, response)
-
-    @staticmethod
-    def get_meta(request, transport):
-        """ Constructs META dict for request.
-
-        @see https://docs.djangoproject.com/en/dev/ref/request-response/#django.http.HttpRequest.META
-
-        @param request: http request object
-        @type request: aiohttp.Request
-        @param transport: transport object
-        @type transport: asyncio.transports.Transport
-
-        @rtype: dict
-        @return request metadata dictionary
-        """
-        meta = dict()
-        for key, value in request.headers.items():
-            meta_key = key.upper().replace('-', '_')
-            meta[meta_key] = value
-        meta['REMOTE_ADDR'], meta['REMOTE_PORT'] = transport.get_extra_info(
-            "peername", (None, None))
-        return meta
-
-    @staticmethod
-    def get_cookies(request):
-        cookie_header = request.headers.get('Cookie')
-        return parse_cookie(str(cookie_header))
-
-    @staticmethod
-    def get_get_params(request):
-        """ Constructs GET dict for request.
-
-        @see https://docs.djangoproject.com/en/dev/ref/request-response/#django.http.HttpRequest.GET
-
-        @param request: http request object
-        @type request: aiohttp.Request
-
-        @rtype: dict
-        @return request metadata dictionary
-        """
-        get = dict()
-        qs = parse.urlparse(request.path).query
-        return qsl_to_dict(parse.parse_qsl(qs))
+from dvasya.middleware import RequestProxyMiddleware
+from dvasya.urls import UrlResolver
 
 
 class ChildProcess:
     """ Worker process for http server."""
     logger = getLogger('dvasya.worker')
 
+    middlewares = [RequestProxyMiddleware.factory]
+
     def __init__(self, up_read, down_write, args, sock):
         self.up_read = up_read
         self.down_write = down_write
         self.args = args
         self.sock = sock
+        if os.environ.get('DJANGO_SETTINGS_MODULE'):
+            self.install_django_handlers()
 
+    def install_django_handlers(self):
+        try:
+            import django
+            django.setup()
+        except ImportError:
+            self.logger.warning(
+                "DJANGO_SETTINGS_MODULE environment variable is set "
+                "but no django is available. Skip installing django handlers.")
+        from dvasya.contrib.django import DjangoRequestProxyMiddleware
+        self.middlewares = [DjangoRequestProxyMiddleware.factory]
+
+    @property
     def protocol_factory(self):
-        return HttpServer(debug=True, keep_alive=75)
+        app = web.Application(router=UrlResolver(), loop=self.loop,
+                              middlewares=self.middlewares)
+        return app.make_handler()
 
     def before_loop(self):
         # heartbeat

@@ -50,4 +50,6 @@ def main():
 
 
 if __name__ == '__main__':
+    from dvasya import VERSION
+    print("Running dvasya v%s" % VERSION)
     main()

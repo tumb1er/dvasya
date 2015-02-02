@@ -11,7 +11,8 @@
 
 from functools import update_wrapper
 import asyncio
-from dvasya.response import HttpResponseNotAllowed, HttpResponse
+from aiohttp.web import Response
+from dvasya.response import HttpResponseNotAllowed
 
 
 class View(object):
@@ -21,7 +22,7 @@ class View(object):
     """
     __inited__ = False
 
-    http_method_names = ['get', 'post', 'put', 'delete', 'head', 'options', 'trace']
+    http_method_names = ['get', 'post', 'put', 'patch', 'delete', 'head', 'options', 'trace']
     http_empty_body_methods = ['get', 'delete', 'head', 'options']
 
     def __init__(self, **kwargs):
@@ -86,16 +87,9 @@ class View(object):
                               self.http_method_not_allowed)
         else:
             handler = self.http_method_not_allowed
-        if method not in self.http_empty_body_methods:
-            data, files = yield from self.process_payload()
-            self.request.POST = data
-            self.request.FILES = files
-        else:
-            self.request.POST = {}
-            self.request.FILES = {}
 
         result = handler(request, *args, **kwargs)
-        if asyncio.tasks.iscoroutine(result):
+        if asyncio.iscoroutine(result):
             result = yield from result
         return result
 
@@ -106,16 +100,9 @@ class View(object):
         """
         Handles responding to requests for the OPTIONS HTTP verb.
         """
-        response = HttpResponse()
-        response.add_header('Allow', ', '.join(self._allowed_methods()))
-        response.add_header('Content-Length', '0')
+        response = Response(text='')
+        response.headers['Allow'] = ', '.join(self._allowed_methods())
         return response
 
     def _allowed_methods(self):
         return [m.upper() for m in self.http_method_names if hasattr(self, m)]
-
-    @asyncio.coroutine
-    def process_payload(self):
-        value = yield from self.request.parse_payload()
-        data, files = value
-        return data, files

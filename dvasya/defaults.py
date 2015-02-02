@@ -14,6 +14,7 @@ FILE_UPLOAD_TEMP_DIR = '/tmp/'
 # internal logging setup
 LOGGING = {
     'disable_existing_loggers': False,
+    'version': 1,
     'formatters': {
         'default': {
             'format': '%(name)s %(asctime)s %(levelname)s: %(message)s',
