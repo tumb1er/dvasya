@@ -75,15 +75,14 @@ def dump_params(request, *args, **kwargs):
 
     post = {}
     files = {}
-    for k, v in request.POST.items():
-        if isinstance(v, str):
-            post[k] = v
-        elif isinstance(v, bytes):
-            post[k] = v.decode("utf-8")
-        else:
-            raise ValueError(v)
-    for k, v in request.FILES.items():
-        files[k] = v.file.read().decode("utf-8")
+    if hasattr(data, 'items'):
+        for k, v in data.items():
+            if isinstance(v, str):
+                post[k] = v
+            elif isinstance(v, bytes):
+                post[k] = v.decode("utf-8")
+            else:
+                files[k] = v.file.read().decode("utf-8")
     meta = {}
     for k, v in request.META.items():
         meta[k] = v
