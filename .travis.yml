@@ -5,6 +5,9 @@ python:
 # command to install dependencies
 install: pip install -r requires.txt -r requires-test.txt --use-mirrors
 # command to run tests
-script: py.test ./tests.py --pep8 dvasya -v --cov dvasya --cov-report term-missing
+script:
+    - py.test ./tests.py --pep8 dvasya -v --cov dvasya --cov-report term-missing
+    - pip install -r requires-test-django.txt --use-mirrors
+    - py.test ./tests_django.py --pep8 dvasya -v --cov dvasya --cov-report term-missing
 after_success:
-    - coveralls
+    - coveralls -v
