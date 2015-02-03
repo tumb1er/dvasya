@@ -10,4 +10,4 @@ script:
     - pip install -r requires-test-django.txt --use-mirrors
     - py.test ./tests_django.py --pep8 dvasya -v --cov dvasya --cov-report term-missing
 after_success:
-    - coveralls -v
+    - coveralls
