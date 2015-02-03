@@ -66,6 +66,9 @@ class View(object):
         # and possible attributes set by decorators
         # like csrf_exempt from dispatch
         update_wrapper(view, cls.dispatch, assigned=())
+        # add methods info for router
+        class_methods = [m for m in cls.http_method_names if hasattr(cls, m)]
+        view._allowed_methods = class_methods
         return view
 
     @asyncio.coroutine
@@ -100,9 +103,10 @@ class View(object):
         """
         Handles responding to requests for the OPTIONS HTTP verb.
         """
-        response = Response(text='')
+        response = Response(status=204, text='')
         response.headers['Allow'] = ', '.join(self._allowed_methods())
         return response
 
     def _allowed_methods(self):
-        return [m.upper() for m in self.http_method_names if hasattr(self, m)]
+        return sorted([m.upper() for m in self.http_method_names
+                       if hasattr(self, m)])
