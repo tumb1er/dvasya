@@ -50,9 +50,10 @@ class HttpResponseNotFound(HTTPNotFound):
         if not settings.DEBUG:
             content = ''
         else:
-            content = ("<h2>No match for path</h2>"
-                      "<h4>{}</h4>"
-                      "<h3>URLConf</h3>".format(path))
+            content = (
+                "<h2>No match for path</h2>"
+                "<h4>{}</h4>"
+                "<h3>URLConf</h3>".format(path))
             content += '<br/>'.join(str(p) for p in patterns)
         super().__init__(text=content, content_type="text/html")
 
@@ -63,8 +64,9 @@ class HttpInternalError(HTTPInternalServerError):
             content = ''
         else:
             stack = traceback.format_exc()
-            content = ("<h2>Internal Server Error</h2>"
-            "<h4>{0}: {1}</h4>"
-            "<h3>Traceback:</h3>"
-            "<pre>{2}</pre>".format(exc.__class__.__name__, exc, stack))
+            content = (
+                "<h2>Internal Server Error</h2>"
+                "<h4>{0}: {1}</h4>"
+                "<h3>Traceback:</h3>"
+                "<pre>{2}</pre>".format(exc.__class__.__name__, exc, stack))
         super().__init__(text=content, content_type="text/html")

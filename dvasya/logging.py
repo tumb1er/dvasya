@@ -34,7 +34,7 @@ def common_logger_config(logger_config, logger, incremental=False):
     if level is not None:
         logger.setLevel(logging._checkLevel(level))
     if not incremental:
-        #Remove any existing handlers
+        # Remove any existing handlers
         for h in logger.handlers[:]:
             logger.removeHandler(h)
         handlers = logger_config.get('handlers', None)
@@ -165,25 +165,25 @@ def configure():
                                      '%r: %s' % (name, e))
             # Next, do loggers - they refer to handlers and filters
 
-            #we don't want to lose the existing loggers,
-            #since other threads may have pointers to them.
-            #existing is set to contain all existing loggers,
-            #and as we go through the new configuration we
-            #remove any which are configured. At the end,
-            #what's left in existing is the set of loggers
-            #which were in the previous configuration but
-            #which are not in the new configuration.
+            # we don't want to lose the existing loggers,
+            # since other threads may have pointers to them.
+            # existing is set to contain all existing loggers,
+            # and as we go through the new configuration we
+            # remove any which are configured. At the end,
+            # what's left in existing is the set of loggers
+            # which were in the previous configuration but
+            # which are not in the new configuration.
             root = logging.root
             existing = list(root.manager.loggerDict)
-            #The list needs to be sorted so that we can
-            #avoid disabling child loggers of explicitly
-            #named loggers. With a sorted list it is easier
-            #to find the child loggers.
+            # The list needs to be sorted so that we can
+            # avoid disabling child loggers of explicitly
+            # named loggers. With a sorted list it is easier
+            # to find the child loggers.
             existing.sort()
-            #We'll keep the list of existing loggers
-            #which are children of named loggers here...
+            # We'll keep the list of existing loggers
+            # which are children of named loggers here...
             child_loggers = []
-            #now set up the new ones...
+            # now set up the new ones...
             loggers = config.get('loggers', EMPTY_DICT)
             for name in loggers:
                 if name in existing:
@@ -191,7 +191,7 @@ def configure():
                     prefixed = name + "."
                     pflen = len(prefixed)
                     num_existing = len(existing)
-                    i = i + 1 # look at the entry after name
+                    i = i + 1  # look at the entry after name
                     while (i < num_existing) and \
                             (existing[i][:pflen] == prefixed):
                         child_loggers.append(existing[i])
@@ -203,11 +203,11 @@ def configure():
                     raise ValueError('Unable to configure logger '
                                      '%r: %s' % (name, e))
 
-            #Disable any old loggers. There's no point deleting
-            #them as other threads may continue to hold references
-            #and by disabling them, you stop them doing any logging.
-            #However, don't disable children of named loggers, as that's
-            #probably not what was intended by the user.
+            # Disable any old loggers. There's no point deleting
+            # them as other threads may continue to hold references
+            # and by disabling them, you stop them doing any logging.
+            # However, don't disable children of named loggers, as that's
+            # probably not what was intended by the user.
             for log in existing:
                 logger = root.manager.loggerDict[log]
                 if log in child_loggers:

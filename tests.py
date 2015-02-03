@@ -24,20 +24,21 @@ class DvasyaServerTestCaseBase(DvasyaTestCase):
         super().setUpClass()
         cls.__expected = {
             "request":
-                {"POST": {},
-                 "GET": {},
-                 "DATA": '',
-                 "FILES": {},
-                 "META": {
-                     "USER_AGENT": HttpMessage.SERVER_SOFTWARE,
-                     "CONTENT_LENGTH": "0",
-                     "HOST": "localhost",
-                     "CONNECTION": "keep-alive",
-                     "ACCEPT": "*/*",
-                     "ACCEPT_ENCODING": "gzip, deflate",
-                     "REMOTE_PORT": "12345",
-                     "REMOTE_ADDR": "127.0.0.1"
-                 },
+                {
+                    "POST": {},
+                    "GET": {},
+                    "DATA": '',
+                    "FILES": {},
+                    "META": {
+                        "USER_AGENT": HttpMessage.SERVER_SOFTWARE,
+                        "CONTENT_LENGTH": "0",
+                        "HOST": "localhost",
+                        "CONNECTION": "keep-alive",
+                        "ACCEPT": "*/*",
+                        "ACCEPT_ENCODING": "gzip, deflate",
+                        "REMOTE_PORT": "12345",
+                        "REMOTE_ADDR": "127.0.0.1"
+                    },
                 },
             "args": [],
             "kwargs": {}
@@ -77,7 +78,6 @@ class DvasyaServerTestCaseBase(DvasyaTestCase):
 
 
 class DvasyaGenericViewsTestCase(DvasyaServerTestCaseBase):
-
     def testClassBasedView(self):
         url = "/class/not_used/"
         result = self.client.get(url)
@@ -95,7 +95,6 @@ class DvasyaGenericViewsTestCase(DvasyaServerTestCaseBase):
 
 
 class UrlResolverTestCase(DvasyaServerTestCaseBase):
-
     def testFunctionView(self):
         url = "/function/"
         result = self.client.get(url)
@@ -147,7 +146,6 @@ class UrlResolverTestCase(DvasyaServerTestCaseBase):
 
 
 class DvasyaResponseTestCase(DvasyaServerTestCaseBase):
-
     def testJSONResponse(self):
         url = "/json/?status=201"
         result = self.client.get(url)
@@ -157,7 +155,8 @@ class DvasyaResponseTestCase(DvasyaServerTestCaseBase):
 
     def testCookieSupport(self):
         url = "/cookies/?cookie_key=value"
-        result = self.client.get(url, headers={"Cookie": "some_key=some_value"})
+        headers = {"Cookie": "some_key=some_value"}
+        result = self.client.get(url, headers=headers)
         data = json.loads(result.text)
         self.assertDictEqual({"some_key": "some_value"}, data)
         cookies = result.cookies
@@ -177,7 +176,6 @@ class DvasyaResponseTestCase(DvasyaServerTestCaseBase):
 
 
 class DvasyaRequestParserTestCase(DvasyaServerTestCaseBase):
-
     def testSimpleGet(self):
         url = '/class/?arg1=val1&arg2=val2?&arg2=val3#hashtag'
         expected = self.expected
@@ -314,6 +312,7 @@ class DjangoTestCase(DvasyaTestCase):
         super().setUpClass()
         os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'testapp.settings')
         from dvasya.contrib.django import DjangoRequestProxyMiddleware
+
         cls.middlewares = [DjangoRequestProxyMiddleware.factory]
 
     def testRequestEncoding(self):
@@ -323,6 +322,7 @@ class DjangoTestCase(DvasyaTestCase):
         }
         data = {"ok": True}
         from rest_framework.response import Response
+
         with mock.patch('testapp.django_compat.views.SampleView.get',
                         return_value=Response(data)) as p:
             response = self.client.get(url, headers=headers)
@@ -332,6 +332,3 @@ class DjangoTestCase(DvasyaTestCase):
 
     def testDjangoRestFrameworkPost(self):
         self.skipTest("FIXME")
-
-
-

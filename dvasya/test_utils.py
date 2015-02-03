@@ -78,7 +78,6 @@ class override_settings(object):
         self.stop()
 
 
-
 class ResponseParser:
     """ Parses byte stream from HttpBuffer.
 
@@ -94,7 +93,8 @@ class ResponseParser:
         headers = email.message.Message()
         for hdr, val in message.headers.items():
             headers.add_header(hdr, val)
-        self.response = web.Response(reason=message.reason, status=message.code,
+        self.response = web.Response(reason=message.reason,
+                                     status=message.code,
                                      headers=headers,
                                      content_type=headers.get('content-type'))
         self.response._cookies = parse_cookie(headers.get('set-cookie', ''))
@@ -284,4 +284,3 @@ class DvasyaTestCase(unittest.TestCase):
     def tearDown(self):
         super().tearDown()
         self.client.finish()
-

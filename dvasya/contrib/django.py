@@ -111,4 +111,3 @@ class StreamingResponseProxy(StreamResponse):
             for chunk in self.__response.streaming_content:
                 self.write(chunk)
         return super().write_eof()
-

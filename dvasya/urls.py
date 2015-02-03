@@ -158,7 +158,7 @@ class UrlResolver(AbstractRouter):
                 continue
             return self.match_info_class(*match)
         raise HttpResponseNotFound(path=request_path,
-                      patterns=[p._regex for p in self.patterns])
+                                   patterns=[p._regex for p in self.patterns])
 
     @staticmethod
     def compile_patterns(urlpatterns):

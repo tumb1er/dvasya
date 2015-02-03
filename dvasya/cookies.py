@@ -8,8 +8,10 @@
 import http.cookies as http_cookies
 
 # Some versions of Python 2.7 and later won't need this encoding bug fix:
-_cookie_encodes_correctly = http_cookies.SimpleCookie().value_encode(';') == (';', '"\\073"')
-# See ticket #13007, http://bugs.python.org/issue2193 and http://trac.edgewall.org/ticket/2256
+__test_cookie_encode = http_cookies.SimpleCookie().value_encode(';')
+_cookie_encodes_correctly = __test_cookie_encode == (';', '"\\073"')
+# See ticket #13007, http://bugs.python.org/issue2193 and
+# http://trac.edgewall.org/ticket/2256
 _tc = http_cookies.SimpleCookie()
 try:
     _tc.load(str('foo:bar=1'))
@@ -30,19 +32,19 @@ else:
                 # These browsers split on ';', and some versions of Safari
                 # are known to split on ', '. Therefore, we encode ';' and ','
 
-                # SimpleCookie already does the hard work of encoding and decoding.
-                # It uses octal sequences like '\\012' for newline etc.
-                # and non-ASCII chars. We just make use of this mechanism, to
-                # avoid introducing two encoding schemes which would be confusing
-                # and especially awkward for javascript.
+                # SimpleCookie already does the hard work of encoding and
+                # decoding. It uses octal sequences like '\\012' for newline
+                # etc. and non-ASCII chars. We just make use of this mechanism,
+                # to avoid introducing two encoding schemes which would be
+                # confusing and especially awkward for javascript.
 
-                # NB, contrary to Python docs, value_encode returns a tuple containing
-                # (real val, encoded_val)
+                # NB, contrary to Python docs, value_encode returns a tuple
+                # containing (real val, encoded_val)
                 val, encoded = super(SimpleCookie, self).value_encode(val)
 
-                encoded = encoded.replace(";", "\\073").replace(",","\\054")
-                # If encoded now contains any quoted chars, we need double quotes
-                # around the whole string.
+                encoded = encoded.replace(";", "\\073").replace(",", "\\054")
+                # If encoded now contains any quoted chars, we need double
+                # quotes around the whole string.
                 if "\\" in encoded and not encoded.startswith('"'):
                     encoded = '"' + encoded + '"'
 

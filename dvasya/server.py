@@ -286,7 +286,6 @@ class Supervisor:
         self.logger.debug("removing worker %s" % pid)
         self.workers.remove(worker)
 
-
     def prefork(self):
         if not self.args.no_daemon:
             self.daemonize()
@@ -353,5 +352,3 @@ class Supervisor:
             os.remove(self.pidfile)
         except IOError:
             pass
-
-

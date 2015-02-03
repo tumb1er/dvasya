@@ -22,7 +22,8 @@ class View(object):
     """
     __inited__ = False
 
-    http_method_names = ['get', 'post', 'put', 'patch', 'delete', 'head', 'options', 'trace']
+    http_method_names = ['get', 'post', 'put', 'patch', 'delete', 'head',
+                         'options', 'trace']
     http_empty_body_methods = ['get', 'delete', 'head', 'options']
 
     def __init__(self, **kwargs):
@@ -43,13 +44,15 @@ class View(object):
         # sanitize keyword arguments
         for key in init_kwargs:
             if key in cls.http_method_names:
-                raise TypeError("You tried to pass in the %s method name as a "
-                                "keyword argument to %s(). Don't do that."
-                                % (key, cls.__name__))
+                raise TypeError(
+                    "You tried to pass in the %s method name as a "
+                    "keyword argument to %s(). Don't do that."
+                    % (key, cls.__name__))
             if not hasattr(cls, key):
-                raise TypeError("%s() received an invalid keyword %r. as_view "
-                                "only accepts arguments that are already "
-                                "attributes of the class." % (cls.__name__, key))
+                raise TypeError(
+                    "%s() received an invalid keyword %r. as_view "
+                    "only accepts arguments that are already "
+                    "attributes of the class." % (cls.__name__, key))
 
         def view(request, *args, **kwargs):
             self = cls(**init_kwargs)
