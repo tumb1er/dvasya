@@ -11,6 +11,7 @@ but it is possible to use eventloop.run_in_executor() to run SQL queries in
 separate thread pool.
 
 [![Build Status](https://travis-ci.org/tumb1er/dvasya.svg?branch=master)](https://travis-ci.org/tumb1er/dvasya)
+[![Coverage Status](https://coveralls.io/repos/tumb1er/dvasya/badge.svg)](https://coveralls.io/r/tumb1er/dvasya)
 
 ## Quick start
 
