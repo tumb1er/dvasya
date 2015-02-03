@@ -9,7 +9,7 @@ import asyncio
 
 from aiohttp import protocol, streams, web, parsers, client
 from dvasya.cookies import parse_cookie
-from dvasya.middleware import RequestProxyMiddleware
+from dvasya.middleware import load_middlewares
 
 
 try:
@@ -18,9 +18,64 @@ except:
     import mock
 
 from dvasya.urls import UrlResolver
+from dvasya.conf import settings
 
 
-__all__ = ['DvasyaHttpClient', 'DvasyaTestCase']
+__all__ = ['DvasyaHttpClient', 'DvasyaTestCase', 'override_settings']
+
+
+class override_settings(object):
+
+    def __init__(self, **kwargs):
+        self.old_values = {}
+        self.new_values = {}
+        for k, v in kwargs.items():
+            if hasattr(settings, k):
+                self.old_values[k] = getattr(settings, k)
+            self.new_values[k] = v
+
+    def __call__(self, decorated):
+        if isinstance(decorated, type):
+            return self.decorate_class(decorated)
+        return self.decorate_callable(decorated)
+
+    def decorate_class(self, klass):
+        for attr in klass.__dict__:
+            if not attr.startswith('test'):
+                continue
+            if callable(getattr(klass, attr)):
+                new_func = self.decorate_callable(getattr(klass, attr))
+                setattr(klass, attr, new_func)
+        return klass
+
+    def start(self):
+        for k, v in self.new_values.items():
+            setattr(settings, k, v)
+
+    def stop(self):
+        for k, v in self.new_values.items():
+            if k in self.old_values:
+                setattr(settings, k, self.old_values[k])
+            else:
+                delattr(settings, k)
+
+    def decorate_callable(self, func):
+
+        @wraps(func)
+        def inner(*args, **kwargs):
+            try:
+                self.start()
+                return func(*args, **kwargs)
+            finally:
+                self.stop()
+        return inner
+
+    def __enter__(self):
+        self.start()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.stop()
+
 
 
 class ResponseParser:
@@ -67,7 +122,7 @@ class DvasyaHttpClient:
 
     def __init__(self, *, urlconf=None, middlewares=None):
         self.root_urlconf = urlconf
-        self.middlewares = middlewares or [RequestProxyMiddleware.factory]
+        self.middlewares = middlewares or load_middlewares()
 
     def create_server(self):
         router = UrlResolver(root_urlconf=self.root_urlconf)
