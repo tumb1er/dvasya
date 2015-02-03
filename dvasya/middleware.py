@@ -2,15 +2,14 @@
 
 # $Id: $
 import asyncio
-from aiohttp.web import Response, HTTPInternalServerError
+from aiohttp.web import Response
 from dvasya.conf import settings
 from dvasya.request import DvasyaRequestProxy
 from dvasya.response import HttpInternalError
+from dvasya.utils import import_object
 
 
-class RequestProxyMiddleware(object):
-    request_class = DvasyaRequestProxy
-    response_class = Response
+class DvasyaMiddlewareBase(object):
 
     @classmethod
     @asyncio.coroutine
@@ -20,6 +19,11 @@ class RequestProxyMiddleware(object):
     def __init__(self, app, handler):
         self.app = app
         self.handler = handler
+
+
+class RequestProxyMiddleware(DvasyaMiddlewareBase):
+    request_class = DvasyaRequestProxy
+    response_class = Response
 
     def __call__(self, request):
         proxy = self.get_request_proxy(request)
@@ -48,3 +52,13 @@ class RequestProxyMiddleware(object):
         import traceback
         trace = traceback.format_exc()
         return "<h2>"
+
+
+def load_middlewares():
+    result = []
+    for classname in settings.DVASYA_MIDDLEWARES:
+        middleware_class = import_object(classname)
+        if not hasattr(middleware_class, 'factory'):
+            raise ValueError("Invalid middleware class %s" % classname)
+        result.append(middleware_class.factory)
+    return result

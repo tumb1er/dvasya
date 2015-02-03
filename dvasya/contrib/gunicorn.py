@@ -17,14 +17,14 @@ from aiohttp import web
 from gunicorn.workers import gaiohttp
 
 from dvasya.logging import getLogger
-from dvasya.middleware import RequestProxyMiddleware
+from dvasya.middleware import load_middlewares
 from dvasya.urls import UrlResolver
 
 
 class GunicornWorker(gaiohttp.AiohttpWorker):
 
     logger = getLogger('dvasya.worker')
-    middlewares = [RequestProxyMiddleware.factory]
+    middlewares = load_middlewares()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

@@ -11,6 +11,10 @@ DEBUG = True
 # temporary directory for files
 FILE_UPLOAD_TEMP_DIR = '/tmp/'
 
+DVASYA_MIDDLEWARES = [
+    'dvasya.middleware.RequestProxyMiddleware',
+]
+
 # internal logging setup
 LOGGING = {
     'disable_existing_loggers': False,
