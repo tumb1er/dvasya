@@ -2,6 +2,7 @@
 
 # $Id: $
 import email
+from functools import wraps
 from io import BytesIO
 import unittest
 from urllib.parse import urlencode
