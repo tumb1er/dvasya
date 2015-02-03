@@ -1,6 +1,10 @@
 # coding: utf-8
 
 # $Id: $
+
+import os
+os.environ.setdefault("DVASYA_SETTINGS_MODULE", 'testapp.settings')
+
 from dvasya.test_utils import DvasyaTestCase
 
 
