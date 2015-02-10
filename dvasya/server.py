@@ -41,9 +41,11 @@ class ChildProcess:
 
     @property
     def protocol_factory(self):
-        app = web.Application(router=UrlResolver(), loop=self.loop,
-                              middlewares=self.middlewares)
-        return app.make_handler()
+        app = web.Application(router=UrlResolver(),
+                              loop=self.loop,
+                              middlewares=self.middlewares,
+                              logger=self.logger)
+        return app.make_handler(access_log=getLogger('dvasya.request'))
 
     def before_loop(self):
         # heartbeat
