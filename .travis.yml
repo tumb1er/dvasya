@@ -8,6 +8,6 @@ install: pip install -r requires.txt -r requires-test.txt --use-mirrors
 script:
     - py.test ./tests.py --pep8 dvasya -v --cov dvasya --cov-report term-missing
     - pip install -r requires-test-django.txt --use-mirrors
-    - py.test ./tests_django.py --pep8 dvasya -v --cov dvasya --cov-report term-missing
+    - py.test ./tests.py ./tests_django.py --pep8 dvasya -v --cov dvasya --cov-report term-missing
 after_success:
     - coveralls

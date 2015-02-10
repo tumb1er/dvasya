@@ -8,7 +8,7 @@ from unittest import mock
 
 os.environ.setdefault("DVASYA_SETTINGS_MODULE", 'testapp.settings')
 
-from dvasya.test_utils import DvasyaTestCase
+from dvasya.test_utils import DvasyaTestCase  # noqa
 
 
 class DjangoTestCase(DvasyaTestCase):
