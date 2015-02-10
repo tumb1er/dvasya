@@ -1,12 +1,14 @@
 # coding: utf-8
 
 # $Id: $
+
+import os
+import sys
+
 from dvasya import defaults
 
 
 __all__ = ['settings']
-import os
-import sys
 
 
 def _load_settings():

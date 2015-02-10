@@ -13,6 +13,8 @@ from aiohttp.web import Response
 
 os.environ.setdefault("DVASYA_SETTINGS_MODULE", 'testapp.settings')
 
+# pep8: disable=E402
+
 from dvasya.test_utils import DvasyaTestCase
 
 from testapp import views

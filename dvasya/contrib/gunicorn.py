@@ -17,6 +17,7 @@ from aiohttp import web
 from gunicorn.workers import gaiohttp
 
 from dvasya.logging import getLogger
+from dvasya.conf import settings
 from dvasya.middleware import load_middlewares
 from dvasya.urls import UrlResolver
 
@@ -34,9 +35,19 @@ class GunicornWorker(gaiohttp.AiohttpWorker):
 
     def reinit_logging(self):
         """ Replaces handlers for dvasya loggers with gunicorn log handlers."""
-        for name in ('dvasya', 'dvasya.worker'):
+        try:
+            loggers = settings.LOGGING['loggers'].keys()
+        except KeyError:
+            return
+        for name in loggers:
             logger = getLogger(name)
-            logger.handlers = self.log.error_log.handlers
+            if name == 'dvasya.request':
+                handlers = self.log.access_log.handlers
+            else:
+                handlers = self.log.error_log.handlers
+            for h in handlers:
+                if h not in logger.handlers:
+                    logger.addHandler(h)
 
     def install_django_handlers(self):
         try:
@@ -63,4 +74,6 @@ class GunicornWorker(gaiohttp.AiohttpWorker):
         ))
 
 
-app = lambda: None
+def app():
+    """ Not used """
+    return None
