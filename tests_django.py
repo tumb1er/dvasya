@@ -19,7 +19,10 @@ class DjangoTestCase(DvasyaTestCase):
         super().setUpClass()
         os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'testapp.settings')
         import django
-        django.setup()
+        # configure django>=1.7
+        setup = getattr(django, 'setup', None)
+        if callable(setup):
+            setup()
         from dvasya.contrib import django as django_contrib
 
         cls.middlewares = [django_contrib.DjangoRequestProxyMiddleware.factory]
@@ -55,6 +58,3 @@ class DjangoTestCase(DvasyaTestCase):
         meta = data['request']['META']
         peername = (meta['REMOTE_ADDR'], meta['REMOTE_PORT'])
         self.assertTupleEqual(peername, self.client.peername)
-
-
-
