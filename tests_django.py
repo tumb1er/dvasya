@@ -19,7 +19,10 @@ class DjangoTestCase(DvasyaTestCase):
         super().setUpClass()
         os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'testapp.settings')
         import django
-        django.setup()
+        # configure django>=1.7
+        setup = getattr(django, 'setup', None)
+        if callable(setup):
+            setup()
         from dvasya.contrib import django as django_contrib
 
         cls.middlewares = [django_contrib.DjangoRequestProxyMiddleware.factory]
@@ -46,3 +49,12 @@ class DjangoTestCase(DvasyaTestCase):
     def testDjango404(self):
         response = self.client.get("/nonexistent")
         self.assertEqual(response.status, 404)
+
+    def testMeta(self):
+        url = '/rest/'
+        response = self.client.get(url)
+        self.assertEqual(response.status, 200)
+        data = json.loads(response.text)
+        meta = data['request']['META']
+        peername = (meta['REMOTE_ADDR'], meta['REMOTE_PORT'])
+        self.assertTupleEqual(peername, self.client.peername)

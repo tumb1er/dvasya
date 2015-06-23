@@ -21,11 +21,11 @@ class DjangoRequestProxy(HttpRequest):
     Should be used as Django HttpRequest.
     """
 
-    def __init__(self, request: Request) -> HttpRequest:
+    def __init__(self, request: Request):
         super().__init__()
         self.__request = request
         self.encoding = self._parse_encoding(request)
-        self.method = request._method
+        self.method = request.method
         self.GET = request.GET
         self.COOKIES = parse_cookie(request.headers.get("COOKIE", ""))
         self._init_meta(request)
@@ -62,9 +62,15 @@ class DjangoRequestProxy(HttpRequest):
         return None
 
     def _init_meta(self, request):
+        transport = self.__request.transport
+        remote_addr, remote_port = transport.get_extra_info("peername")
+        self.META = {
+            'REMOTE_ADDR': remote_addr,
+            "REMOTE_PORT": remote_port
+        }
+
         for k, v in request.headers.items():
             self.META[k.upper().replace('-', '_')] = v
-        # FIXME: Remote_addr, remote_port
 
 
 class DjangoRequestProxyMiddleware(RequestProxyMiddleware):
@@ -104,7 +110,7 @@ class StreamingResponseProxy(StreamResponse):
     Should be used as aiohttp.web.Response.
     """
 
-    def __init__(self, response: StreamingHttpResponse)-> StreamResponse:
+    def __init__(self, response: StreamingHttpResponse):
         super().__init__(status=response.status_code)
         self.__response = response
 

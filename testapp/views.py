@@ -66,13 +66,18 @@ def dump_params(request, *args, **kwargs):
     if not data:
         data = yield from request.read()
 
+    result = collect_request_data(request, data, args, kwargs)
+    body = json.dumps(result)
+    response = Response(text=body, status=200, content_type="application/json")
+    return response
+
+
+def collect_request_data(request, data, args, kwargs):
     if hasattr(data, 'file'):
         f = data.file
         data = f.read()
-
     if isinstance(data, bytes):
         data = data.decode('utf-8')
-
     post = {}
     files = {}
     if hasattr(data, 'items'):
@@ -86,7 +91,6 @@ def dump_params(request, *args, **kwargs):
     meta = {}
     for k, v in request.META.items():
         meta[k] = v
-
     result = {
         'request': {
             'GET': mvdict_to_listdict(request.GET),
@@ -98,9 +102,7 @@ def dump_params(request, *args, **kwargs):
         'args': args,
         'kwargs': kwargs
     }
-    body = json.dumps(result)
-    response = Response(text=body, status=200, content_type="application/json")
-    return response
+    return result
 
 
 @asyncio.coroutine
