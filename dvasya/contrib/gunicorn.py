@@ -24,7 +24,6 @@ from dvasya.urls import UrlResolver, load_resolver
 
 
 class GunicornWorker(gaiohttp.AiohttpWorker):
-
     logger = getLogger('dvasya.worker')
     middlewares = load_middlewares()
     resolver_class = UrlResolver
@@ -55,6 +54,7 @@ class GunicornWorker(gaiohttp.AiohttpWorker):
         try:
             # noinspection PyUnresolvedReferences
             import django
+
             django.setup()
         except ImportError:
             self.logger.warning(
@@ -74,9 +74,9 @@ class GunicornWorker(gaiohttp.AiohttpWorker):
 
     def get_factory(self, sock, addr):
         application = web.Application(router=self.resolver_class(),
-                              loop=self.loop,
-                              middlewares=self.middlewares,
-                              logger=self.log)
+                                      loop=self.loop,
+                                      middlewares=self.middlewares,
+                                      logger=self.log)
         return functools.partial(self.web_factory, application.make_handler(
             access_log=self.log.access_log
         ))
