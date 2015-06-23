@@ -44,3 +44,15 @@ class DjangoTestCase(DvasyaTestCase):
     def testDjango404(self):
         response = self.client.get("/nonexistent")
         self.assertEqual(response.status, 404)
+
+    def testMeta(self):
+        url = '/rest/'
+        response = self.client.get(url)
+        self.assertEqual(response.status, 200)
+        data = json.loads(response.text)
+        meta = data['request']['META']
+        peername = (meta['REMOTE_ADDR'], meta['REMOTE_PORT'])
+        self.assertTupleEqual(peername, self.client.peername)
+
+
+

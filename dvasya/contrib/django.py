@@ -62,9 +62,15 @@ class DjangoRequestProxy(HttpRequest):
         return None
 
     def _init_meta(self, request):
+        transport = self.__request.transport
+        remote_addr, remote_port = transport.get_extra_info("peername")
+        self.META = {
+            'REMOTE_ADDR': remote_addr,
+            "REMOTE_PORT": remote_port
+        }
+
         for k, v in request.headers.items():
             self.META[k.upper().replace('-', '_')] = v
-        # FIXME: Remote_addr, remote_port
 
 
 class DjangoRequestProxyMiddleware(RequestProxyMiddleware):
