@@ -43,7 +43,7 @@ class ChildProcess:
 
     @property
     def protocol_factory(self):
-        app = web.Application(router=self.resolver_class,
+        app = web.Application(router=self.resolver_class(),
                               loop=self.loop,
                               middlewares=self.middlewares,
                               logger=self.logger)
