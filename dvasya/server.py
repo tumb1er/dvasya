@@ -24,7 +24,7 @@ import aiohttp.server
 from aiohttp import websocket, web
 from dvasya.logging import getLogger
 from dvasya.middleware import load_middlewares
-from dvasya.urls import UrlResolver
+from dvasya.urls import load_resolver
 
 
 class ChildProcess:
@@ -32,6 +32,8 @@ class ChildProcess:
     logger = getLogger('dvasya.worker')
 
     middlewares = load_middlewares()
+
+    resolver_class = load_resolver()
 
     def __init__(self, up_read, down_write, args, sock):
         self.up_read = up_read
@@ -41,7 +43,7 @@ class ChildProcess:
 
     @property
     def protocol_factory(self):
-        app = web.Application(router=UrlResolver(),
+        app = web.Application(router=self.resolver_class,
                               loop=self.loop,
                               middlewares=self.middlewares,
                               logger=self.logger)
