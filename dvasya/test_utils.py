@@ -18,7 +18,7 @@ try:
 except:
     import mock
 
-from dvasya.urls import UrlResolver
+from dvasya.urls import UrlResolver, load_resolver
 from dvasya.conf import settings
 
 
@@ -96,12 +96,13 @@ class ResponseParser:
         self.response = web.Response(reason=message.reason,
                                      status=message.code,
                                      headers=headers,
-                                     content_type=headers.get('content-type'))
+                                     content_type=headers.get('content-type'),
+                                     body=b'')
         self.response._cookies = parse_cookie(headers.get('set-cookie', ''))
 
     def parse_http_content(self, content):
         """ Parses response body, dealing with transfer-encodings."""
-        self.response.text = content.decode('utf-8')
+        self.response.body += content# .decode('utf-8')
 
     def feed_eof(self):
         pass
@@ -121,12 +122,13 @@ class DvasyaHttpClient:
     """ Test Client for dvasya server. """
     peername = ('127.0.0.1', '12345')
 
-    def __init__(self, *, urlconf=None, middlewares=None):
+    def __init__(self, *, urlconf=None, middlewares=None, resolver=None):
         self.root_urlconf = urlconf
         self.middlewares = middlewares or load_middlewares()
+        self.resolver_class = resolver or load_resolver()
 
     def create_server(self):
-        router = UrlResolver(root_urlconf=self.root_urlconf)
+        router = self.resolver_class(root_urlconf=self.root_urlconf)
         app = web.Application(router=router,
                               loop=self._loop,
                               middlewares=self.middlewares)
@@ -276,10 +278,13 @@ class DvasyaTestCase(unittest.TestCase):
     # ROOT_URLCONF setting form dvasya app
     root_urlconf = None
 
+    resolver_class = UrlResolver
+
     def setUp(self):
         super().setUp()
         self.client = DvasyaHttpClient(urlconf=self.root_urlconf,
-                                       middlewares=self.middlewares)
+                                       middlewares=self.middlewares,
+                                       resolver=self.resolver_class)
 
     def tearDown(self):
         super().tearDown()

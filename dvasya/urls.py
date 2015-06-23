@@ -153,7 +153,7 @@ class UrlResolver(AbstractRouter):
         request_path = request.path.lstrip('/')
         request_path = request_path.split('?', 1)[0]
         for pattern in self.patterns:
-            match = pattern.resolve(request_path)
+            match = self.match_pattern(pattern, request_path)
             if not match:
                 continue
             return self.match_info_class(*match)
@@ -174,3 +174,10 @@ class UrlResolver(AbstractRouter):
         for url in urlpatterns:
             result.append(url)
         return result
+
+    def match_pattern(self, pattern, request_path):
+        return pattern.resolve(request_path)
+
+
+def load_resolver():
+    return import_object(settings.URL_RESOLVER_CLASS)
