@@ -18,6 +18,8 @@ class DjangoTestCase(DvasyaTestCase):
     def setUpClass(cls):
         super().setUpClass()
         os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'testapp.settings')
+        import django
+        django.setup()
         from dvasya.contrib import django as django_contrib
 
         cls.middlewares = [django_contrib.DjangoRequestProxyMiddleware.factory]
