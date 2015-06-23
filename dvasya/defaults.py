@@ -15,6 +15,8 @@ DVASYA_MIDDLEWARES = [
     'dvasya.middleware.RequestProxyMiddleware',
 ]
 
+URL_RESOLVER_CLASS = 'dvasya.urls.UrlResolver'
+
 # internal logging setup
 LOGGING = {
     'disable_existing_loggers': False,

@@ -11,12 +11,14 @@
 import asyncio
 import re
 import aiohttp
+import aiohttp.web
 from aiohttp.abc import AbstractRouter, AbstractMatchInfo
 from dvasya.conf import settings
 from dvasya.response import HttpResponseNotFound
 from dvasya.utils import import_object
 
 
+# noinspection PyUnusedLocal
 def patterns(prefix, *pattern_list):
     """ Django compatibility method."""
     # prefix not supported
@@ -42,6 +44,10 @@ class UrlPattern:
         self.name = name
         self.rx = None
 
+    @property
+    def regex(self):
+        return self._regex
+
     def compile(self):
         self.rx = re.compile(self._regex)
 
@@ -65,6 +71,7 @@ class UrlPattern:
 
 class LocalUrlPattern(UrlPattern):
     """ Url pattern matcher for 'include' case."""
+    # noinspection PyUnusedLocal
     def __init__(self, pattern, pattern_list, name=None):
         super(LocalUrlPattern, self).__init__(pattern, None)
         self.local_patterns = pattern_list
@@ -84,8 +91,9 @@ class LocalUrlPattern(UrlPattern):
             match = pattern.resolve(rest_path)
             if match:
                 return match
-        patterns = [self._regex + ' ' + p.pattern for p in self.local_patterns]
-        raise HttpResponseNotFound(path=path, patterns=patterns)
+        pattern_list = [self._regex + ' ' + p.pattern
+                        for p in self.local_patterns]
+        raise HttpResponseNotFound(path=path, patterns=pattern_list)
 
 
 def url(rx, view_or_patterns, name=None):
@@ -153,12 +161,12 @@ class UrlResolver(AbstractRouter):
         request_path = request.path.lstrip('/')
         request_path = request_path.split('?', 1)[0]
         for pattern in self.patterns:
-            match = pattern.resolve(request_path)
+            match = self.match_pattern(pattern, request_path)
             if not match:
                 continue
             return self.match_info_class(*match)
         raise HttpResponseNotFound(path=request_path,
-                                   patterns=[p._regex for p in self.patterns])
+                                   patterns=[p.regex for p in self.patterns])
 
     @staticmethod
     def compile_patterns(urlpatterns):
@@ -171,6 +179,13 @@ class UrlResolver(AbstractRouter):
         @rtype: list
         """
         result = []
-        for url in urlpatterns:
-            result.append(url)
+        for pattern in urlpatterns:
+            result.append(pattern)
         return result
+
+    def match_pattern(self, pattern, request_path):
+        return pattern.resolve(request_path)
+
+
+def load_resolver():
+    return import_object(settings.URL_RESOLVER_CLASS)

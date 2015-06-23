@@ -18,9 +18,12 @@ class DjangoTestCase(DvasyaTestCase):
     def setUpClass(cls):
         super().setUpClass()
         os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'testapp.settings')
-        from dvasya.contrib.django import DjangoRequestProxyMiddleware
+        import django
+        django.setup()
+        from dvasya.contrib import django as django_contrib
 
-        cls.middlewares = [DjangoRequestProxyMiddleware.factory]
+        cls.middlewares = [django_contrib.DjangoRequestProxyMiddleware.factory]
+        cls.resolver_class = django_contrib.DjangoUrlResolver
 
     def testRequestEncoding(self):
         url = '/rest/'
@@ -39,3 +42,7 @@ class DjangoTestCase(DvasyaTestCase):
 
     def testDjangoRestFrameworkPost(self):
         self.skipTest("FIXME")
+
+    def testDjango404(self):
+        response = self.client.get("/nonexistent")
+        self.assertEqual(response.status, 404)

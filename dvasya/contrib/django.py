@@ -6,8 +6,10 @@ import cgi
 import codecs
 
 from aiohttp.web import Request, Response, StreamResponse, FileField
+from django.core.urlresolvers import Resolver404
 from django.http import StreamingHttpResponse
 from django.http.request import HttpRequest
+from dvasya.urls import UrlResolver
 
 from dvasya.cookies import parse_cookie
 from dvasya.middleware import RequestProxyMiddleware
@@ -111,3 +113,11 @@ class StreamingResponseProxy(StreamResponse):
             for chunk in self.__response.streaming_content:
                 self.write(chunk)
         return super().write_eof()
+
+
+class DjangoUrlResolver(UrlResolver):
+    def match_pattern(self, pattern, request_path):
+        try:
+            return super().match_pattern(pattern, request_path)
+        except Resolver404:
+            return None
