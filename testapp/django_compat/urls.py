@@ -10,7 +10,7 @@ from testapp.django_compat import views
 admin.autodiscover()
 
 urlpatterns = patterns('',
-    url(r'^admin/', include(admin.site.urls)),
+    url('^admin/', include(admin.site.urls)),
     url('^rest/$', views.SampleView.as_view()),
     url('^static/(?P<path>.*)', serve)
 )

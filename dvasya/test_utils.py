@@ -102,7 +102,7 @@ class ResponseParser:
 
     def parse_http_content(self, content):
         """ Parses response body, dealing with transfer-encodings."""
-        self.response.body += content# .decode('utf-8')
+        self.response.body += content
 
     def feed_eof(self):
         pass
