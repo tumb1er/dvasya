@@ -58,3 +58,20 @@ class DjangoTestCase(DvasyaTestCase):
         meta = data['request']['META']
         peername = (meta['REMOTE_ADDR'], meta['REMOTE_PORT'])
         self.assertTupleEqual(peername, self.client.peername)
+
+    def testCaseInsensitiveHeaders(self):
+        url = '/rest/'
+        headers = {
+            'X-Real-IP': '127.0.0.2',
+            'Remote-addr': "hacked_addr"
+        }
+        data = {"ok": True}
+        from rest_framework.response import Response
+
+        with mock.patch('testapp.django_compat.views.SampleView.get',
+                        return_value=Response(data)) as p:
+            response = self.client.get(url, headers=headers)
+            self.assertEqual(response.text, json.dumps(data).replace(' ', ''))
+        request = p.call_args[0][0]
+        self.assertEqual(request.META.get('X_REAL_IP'), '127.0.0.2')
+        self.assertEqual(request.META.get('REMOTE_ADDR'), '127.0.0.1')

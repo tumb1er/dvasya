@@ -4,6 +4,7 @@
 import asyncio
 import cgi
 import codecs
+from aiohttp.multidict import CIMultiDictProxy, CIMultiDict
 
 from aiohttp.web import Request, Response, StreamResponse, FileField
 from django.core.urlresolvers import Resolver404
@@ -64,13 +65,15 @@ class DjangoRequestProxy(HttpRequest):
     def _init_meta(self, request):
         transport = self.__request.transport
         remote_addr, remote_port = transport.get_extra_info("peername")
-        self.META = {
+        meta = CIMultiDict({
+            k.replace('-', '_'): v
+            for k, v in request.headers.items()})
+        peer_info = {
             'REMOTE_ADDR': remote_addr,
             "REMOTE_PORT": remote_port
         }
-
-        for k, v in request.headers.items():
-            self.META[k.upper().replace('-', '_')] = v
+        meta.update(peer_info)
+        self.META = CIMultiDictProxy(meta)
 
 
 class DjangoRequestProxyMiddleware(RequestProxyMiddleware):
