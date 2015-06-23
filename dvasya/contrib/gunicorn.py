@@ -14,6 +14,7 @@ import functools
 import os
 
 from aiohttp import web
+# noinspection PyPackageRequirements
 from gunicorn.workers import gaiohttp
 
 from dvasya.logging import getLogger
@@ -52,6 +53,7 @@ class GunicornWorker(gaiohttp.AiohttpWorker):
 
     def install_django_handlers(self):
         try:
+            # noinspection PyUnresolvedReferences
             import django
             django.setup()
         except ImportError:
@@ -60,20 +62,22 @@ class GunicornWorker(gaiohttp.AiohttpWorker):
                 "but no django is available. Skip installing django handlers.")
         from dvasya.contrib import django as django_contrib
 
-        self.middlewares = [django_contrib.DjangoRequestProxyMiddleware.factory]
-        self.resolver_class = load_resolver()
+        self.middlewares = [
+            django_contrib.DjangoRequestProxyMiddleware.factory
+        ]
 
+        self.resolver_class = load_resolver()
 
     def web_factory(self, handler):
         proto = handler()
         return self.wrap_protocol(proto)
 
     def get_factory(self, sock, addr):
-        app = web.Application(router=self.resolver_class(),
+        application = web.Application(router=self.resolver_class(),
                               loop=self.loop,
                               middlewares=self.middlewares,
                               logger=self.log)
-        return functools.partial(self.web_factory, app.make_handler(
+        return functools.partial(self.web_factory, application.make_handler(
             access_log=self.log.access_log
         ))
 

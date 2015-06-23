@@ -12,21 +12,18 @@ from aiohttp import protocol, streams, web, parsers, client
 from dvasya.cookies import parse_cookie
 from dvasya.middleware import load_middlewares
 
-
 try:
     from unittest import mock
-except:
+except ImportError:
     import mock
 
 from dvasya.urls import UrlResolver, load_resolver
 from dvasya.conf import settings
 
-
 __all__ = ['DvasyaHttpClient', 'DvasyaTestCase', 'override_settings']
 
 
 class override_settings(object):
-
     def __init__(self, **kwargs):
         self.old_values = {}
         self.new_values = {}
@@ -69,6 +66,7 @@ class override_settings(object):
                 return func(*args, **kwargs)
             finally:
                 self.stop()
+
         return inner
 
     def __enter__(self):
@@ -271,7 +269,6 @@ class DvasyaHttpClient:
 
 
 class DvasyaTestCase(unittest.TestCase):
-
     # List of middlewares to init in dvasya app
     middlewares = []
 
