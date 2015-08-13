@@ -6,7 +6,8 @@ import cgi
 import codecs
 from aiohttp.multidict import CIMultiDictProxy, CIMultiDict
 
-from aiohttp.web import Request, Response, StreamResponse, FileField
+from aiohttp.web import Request, Response, StreamResponse
+from aiohttp.web_reqrep import FileField
 from django.core.urlresolvers import Resolver404
 from django.http import StreamingHttpResponse
 from django.http.request import HttpRequest
