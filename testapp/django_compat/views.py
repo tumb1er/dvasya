@@ -21,7 +21,7 @@ class SampleView(GenericAPIView):
         return super().dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
-        data = collect_request_data(request, request.DATA, args, kwargs)
+        data = collect_request_data(request, request.data, args, kwargs)
         return Response(data)
 
     def post(self, request, *args, **kwargs):
