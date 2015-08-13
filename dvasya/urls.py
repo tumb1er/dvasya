@@ -130,6 +130,11 @@ class RegexMatchInfo(AbstractMatchInfo):
     def handler(self):
         return self._wrapper
 
+    @property
+    def route(self, *args, **kwargs):
+        # FIXME: fast stub to prevent ABCMeta TypeError
+        raise NotImplementedError()
+
 
 class UrlResolver(AbstractRouter):
     """ Global URL resolver class."""

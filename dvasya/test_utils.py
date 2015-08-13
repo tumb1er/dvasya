@@ -85,7 +85,7 @@ class ResponseParser:
     def __init__(self, buffer):
         self.buffer = buffer
 
-    def parse_http_message(self, message):
+    def parse_http_message(self, message, length):
         """ Parses HTTP headers."""
         self.message = message
         headers = email.message.Message()
@@ -98,7 +98,7 @@ class ResponseParser:
                                      body=b'')
         self.response._cookies = parse_cookie(headers.get('set-cookie', ''))
 
-    def parse_http_content(self, content):
+    def parse_http_content(self, content, length):
         """ Parses response body, dealing with transfer-encodings."""
         self.response.body += content
 
