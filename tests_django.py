@@ -67,6 +67,7 @@ class DjangoTestCase(DvasyaTestCase):
         }
         data = {"ok": True}
         from rest_framework.response import Response
+        self.maxDiff = None
 
         with mock.patch('testapp.django_compat.views.SampleView.get',
                         return_value=Response(data)) as p:

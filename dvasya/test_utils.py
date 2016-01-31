@@ -94,7 +94,6 @@ class ResponseParser:
         self.response = web.Response(reason=message.reason,
                                      status=message.code,
                                      headers=headers,
-                                     content_type=headers.get('content-type'),
                                      body=b'')
         self.response._cookies = parse_cookie(headers.get('set-cookie', ''))
 

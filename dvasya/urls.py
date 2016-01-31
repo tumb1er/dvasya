@@ -135,6 +135,14 @@ class RegexMatchInfo(AbstractMatchInfo):
         # FIXME: fast stub to prevent ABCMeta TypeError
         raise NotImplementedError()
 
+    @property
+    def expect_handler(self):
+        return aiohttp.web_urldispatcher._defaultExpectHandler
+
+    @property
+    def http_exception(self):
+        return None
+
 
 class UrlResolver(AbstractRouter):
     """ Global URL resolver class."""

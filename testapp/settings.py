@@ -13,6 +13,7 @@ URL_RESOLVER_CLASS = 'dvasya.contrib.django.DjangoUrlResolver'
 SECRET_KEY = 'secret_key_for_django'
 
 INSTALLED_APPS = [
+    'django.contrib.auth',
     'django.contrib.staticfiles',
     'django.contrib.contenttypes',
     'django.contrib.admin',

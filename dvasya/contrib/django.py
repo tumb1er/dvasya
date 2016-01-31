@@ -101,9 +101,7 @@ class ResponseProxy(Response):
         super(ResponseProxy, self).__init__(
             body=response.content,
             status=response.status_code,
-            headers=response,
-            content_type=response.get('CONTENT-TYPE')
-
+            headers=response
         )
         self.__response = response
 

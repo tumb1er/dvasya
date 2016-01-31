@@ -5,7 +5,7 @@ from dvasya import VERSION
 
 SCRIPTS = "manage", "gunicorn"
 
-install_requires=['aiohttp>=0.17.2,<0.18']
+install_requires=['aiohttp>=0.17.2,<0.21']
 
 
 PY_VER = sys.version_info
