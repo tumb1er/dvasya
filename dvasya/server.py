@@ -275,6 +275,8 @@ class Supervisor:
                         % (child, exitcode))
                     if self._terminating:
                         self.remove_worker(child)
+                    else:
+                        self.restart_worker(child)
             except:
                 break
 
@@ -289,6 +291,22 @@ class Supervisor:
             return
         self.logger.debug("removing worker %s" % pid)
         self.workers.remove(worker)
+
+    def restart_worker(self, pid):
+        worker = None
+        for worker in self.workers:
+            if worker.pid == pid:
+                break
+        if not worker:
+            self.logger.error("unregistered worker found, exiting")
+            self.loop.stop()
+            return
+        self.logger.debug("restarting worker %s" % pid)
+        try:
+            worker.kill()
+        except Exception:
+            self.logger.error("Error while restarting worker %s" % pid)
+        worker.start()
 
     def prefork(self):
         if not self.args.no_daemon:
