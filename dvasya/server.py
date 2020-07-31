@@ -304,8 +304,11 @@ class Supervisor:
         self.logger.debug("restarting worker %s" % pid)
         try:
             worker.kill()
-        except Exception:
-            self.logger.error("Error while restarting worker %s" % pid)
+        except Exception as err:
+            self.logger.exception(
+                "Error while restarting worker (%s)" % err,
+                extra={"worker_pid": pid},
+            )
         worker.start()
 
     def prefork(self):
